@@ -1,9 +1,13 @@
 import net from "net";
-import { Addressing, MethodSelection, STAGE } from "../socks/socks5";
+import {
+  Addressing,
+  MethodSelection,
+  STAGE,
+  Authentication,
+} from "../socks/handshake";
 import { pipe } from "../net/pipe";
 import { createConnection, createServer } from "../net/create";
 import { ClientConn, ServerConn, ServerConnError } from "./common";
-import { NO_ACCEPTABLE_METHODS, getAuthHandler } from "../socks/auth/factory";
 
 interface Config {
   clientIP: string;
@@ -52,10 +56,12 @@ export class Client {
 
       // auth check
       stage = STAGE.AUTHENTICATION;
-      var handler = getAuthHandler(methodRep.getMethod());
+      var handler = Authentication.getAuthHandler(methodRep.getMethod());
       if (!handler) {
-        await from.write(NO_ACCEPTABLE_METHODS);
-        throw new Error(`Auth method not found, method=${methodRep.getMethod()}`);
+        await from.write(Authentication.NO_ACCEPTABLE_METHODS);
+        throw new Error(
+          `Auth method not found, method=${methodRep.getMethod()}`
+        );
       }
       await from.write(methodRep.toBuffer());
       if (handler.clientHandler) {
