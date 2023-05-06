@@ -1,9 +1,9 @@
-import { Client } from "./client/client";
+import { Client } from "./proxy/client";
 
 var client = new Client({
-    clientIp: "localhost",
+    clientIP: "localhost",
     clientPort: 8010,
-    serverIp: "localhost",
+    serverIP: "localhost",
     serverPort: 8011,
 })
 
