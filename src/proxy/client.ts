@@ -82,7 +82,7 @@ export class Client {
       console.log(e);
 
       if (stage === STAGE.ADDRESSING && (e as ServerConnError)) {
-        if (from.__sock.writable) {
+        if (from._sock.writable) {
           from.write(Addressing.SERVER_INTERNAL_ERROR);
         }
       }
@@ -95,6 +95,6 @@ export class Client {
     stage = STAGE.PIPING;
     from.stopWatchEvents();
     to.stopWatchEvents();
-    pipe(from.__sock, to.__sock);
+    pipe(from._sock, to._sock);
   };
 }

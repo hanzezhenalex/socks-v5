@@ -15,7 +15,7 @@ interface SocketEvent {
 }
 
 export class SocketPromise {
-  __sock: Socket;
+  _sock: Socket;
   private waitingReadEvents: SocketEvent[] = [];
   private readBuffer: Buffer | undefined;
 
@@ -24,7 +24,7 @@ export class SocketPromise {
   private _hasEnd: boolean = false;
 
   constructor(socket: Socket) {
-    this.__sock = socket
+    this._sock = socket
       .on("data", this.onData)
       // Emitted when an error occurs. The 'close' event will be called directly following this event.
       .on("error", this.onError)
@@ -33,7 +33,7 @@ export class SocketPromise {
   }
 
   stopWatchEvents = () => {
-    this.__sock
+    this._sock
       .removeListener("data", this.onData)
       .removeListener("error", this.onError)
       .removeListener("end", this.onEnd);
@@ -68,7 +68,7 @@ export class SocketPromise {
     }
 
     var emitter = new EventEmitter();
-    this.__sock.write(buffer, (err) => emitter.emit(socketErrorEvent, err));
+    this._sock.write(buffer, (err) => emitter.emit(socketErrorEvent, err));
 
     return new Promise((resolve, reject) => {
       emitter.on(socketErrorEvent, (err) => {
@@ -78,7 +78,7 @@ export class SocketPromise {
   };
 
   close = () => {
-    this.__sock.writable ? this.__sock.end() : null;
+    this._sock.writable ? this._sock.end() : null;
     this._hasClosed = true;
   };
 
@@ -114,7 +114,7 @@ export class SocketPromise {
 
   private getN = (n: number): Buffer => {
     if (!this.readBuffer) {
-      throw new Error("__readBuffer should not be undefined");
+      throw new Error("readBuffer should not be undefined");
     }
 
     var response: Buffer;
