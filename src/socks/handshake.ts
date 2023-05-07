@@ -20,6 +20,14 @@ export enum STAGE {
   PIPING = 4,
 }
 
+export namespace Errors {
+  export class IncorrectVersionError extends Error {
+    constructor(msg: any) {
+      super(`incorrect version, expect=0x05, actual=${msg}`)
+    }
+  }
+}
+
 export namespace MethodSelection {
   export class Request {
     private methods: Uint8Array;
@@ -53,7 +61,10 @@ export namespace MethodSelection {
     // +----+----------+----------+
     // | 1  |    1     | 1 to 255 |
     // +----+----------+----------+
-    await __sock.read(1);
+    var version = await __sock.read(1);
+    if (version[0] !== SOCKS5_VERSION) {
+      throw new Errors.IncorrectVersionError(`${version[0]}`)
+    }
     var n_methods = await __sock.read(1);
     var methods = await __sock.read(n_methods.readInt8());
     return new Request(methods);
@@ -97,11 +108,11 @@ export namespace Addressing {
   ]);
 
   class Message {
-    private __cmd_or_rep: Uint8Array;
-    private __atyp: Uint8Array;
-    private __addrLength: number;
-    private __dstAddr: Uint8Array;
-    private __dstPort: Buffer;
+    private cmd_or_rep: Uint8Array;
+    private atyp: Uint8Array;
+    private addrLength: number;
+    private dstAddr: Uint8Array;
+    private dstPort: Buffer;
 
     constructor(
       cmd_or_rep: Uint8Array,
@@ -110,66 +121,66 @@ export namespace Addressing {
       dstAddr: Uint8Array,
       dstPort: Buffer
     ) {
-      this.__cmd_or_rep = cmd_or_rep;
-      this.__atyp = atyp;
-      this.__addrLength = addrLength;
-      this.__dstAddr = dstAddr;
-      this.__dstPort = dstPort;
+      this.cmd_or_rep = cmd_or_rep;
+      this.atyp = atyp;
+      this.addrLength = addrLength;
+      this.dstAddr = dstAddr;
+      this.dstPort = dstPort;
     }
 
     needDnsLookUp = (): boolean => {
-      return this.__atyp[0] === 0x03;
+      return this.atyp[0] === 0x03;
     };
 
     toBuffer = (): Uint8Array => {
       var buffer: Uint8Array;
-      switch (this.__atyp[0]) {
+      switch (this.atyp[0]) {
         case 0x01:
           buffer = new Uint8Array(3 + 1 + 4 + 2);
           for (var i = 4, j = 0; j < 4; i++, j++) {
-            buffer[i] = this.__dstAddr[j];
+            buffer[i] = this.dstAddr[j];
           }
-          buffer[8] = this.__dstPort[0];
-          buffer[9] = this.__dstPort[1];
+          buffer[8] = this.dstPort[0];
+          buffer[9] = this.dstPort[1];
           break;
         case 0x03:
-          buffer = new Uint8Array(3 + 1 + 1 + this.__addrLength + 2);
-          buffer[4] = this.__addrLength;
+          buffer = new Uint8Array(3 + 1 + 1 + this.addrLength + 2);
+          buffer[4] = this.addrLength;
           var i = 5;
-          for (var j = 0; j < this.__addrLength; i++, j++) {
-            buffer[i] = this.__dstAddr[j];
+          for (var j = 0; j < this.addrLength; i++, j++) {
+            buffer[i] = this.dstAddr[j];
           }
-          buffer[i] = this.__dstPort[0];
-          buffer[i + 1] = this.__dstPort[1];
+          buffer[i] = this.dstPort[0];
+          buffer[i + 1] = this.dstPort[1];
           break;
         case 0x04:
           buffer = new Uint8Array(3 + 1 + 16 + 2);
           for (var i = 4, j = 0; j < 16; i++, j++) {
-            buffer[i] = this.__dstAddr[j];
+            buffer[i] = this.dstAddr[j];
           }
-          buffer[20] = this.__dstPort[0];
-          buffer[21] = this.__dstPort[1];
+          buffer[20] = this.dstPort[0];
+          buffer[21] = this.dstPort[1];
           break;
         default:
           throw new Error("Unknown addr type");
       }
       buffer[0] = SOCKS5_VERSION;
-      buffer[1] = this.__cmd_or_rep[0];
+      buffer[1] = this.cmd_or_rep[0];
       buffer[2] = RSV_BUFFER;
-      buffer[3] = this.__atyp[0];
+      buffer[3] = this.atyp[0];
       return buffer;
     };
 
     getCmdOrRep = (): number => {
-      return this.__cmd_or_rep[0];
+      return this.cmd_or_rep[0];
     };
 
     getTargetPort = (): number => {
-      return this.__dstPort.readUint16BE();
+      return this.dstPort.readUint16BE();
     };
 
     getTargetAddr = (): string => {
-      return this.__dstAddr.toString();
+      return this.dstAddr.toString();
     };
   }
 
