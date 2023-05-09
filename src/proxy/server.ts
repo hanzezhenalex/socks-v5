@@ -37,12 +37,11 @@ export class Server {
 
     try {
       // version identify and method selection
-      stage = STAGE.ADDRESSING;
+      stage = STAGE.METHOD_SELECTION;
       var methodRequest = await MethodSelection.readReq(from);
 
       var handler = Authentication.selectAuthMethod(methodRequest.getMethod());
       if (!handler) {
-        await from.write(Authentication.NO_ACCEPTABLE_METHODS);
         throw new Error(
           `Auth method not found, supported methods=${methodRequest.getMethod()}`
         );
@@ -56,7 +55,7 @@ export class Server {
       var addrRequest = await Addressing.readMessage(from);
 
       if (addrRequest.getCmdOrRep() != Addressing.CONNECT) {
-        throw new Errors.UnsupportedMethod(addrRequest.getCmdOrRep());
+        throw new Errors.CommandNotSupport(addrRequest.getCmdOrRep());
       }
 
       // try to create connection to target server
@@ -72,7 +71,7 @@ export class Server {
       var bindAddrInfo: AddressInfo | {} = to._sock.address();
       var addrRep = new Addressing.Message(
         Addressing.SUCCEED,
-        (bindAddrInfo as AddressInfo).family === "IPv4" ? 0x00 : 0x04,
+        (bindAddrInfo as AddressInfo).family === "IPv4" ? 0x01 : 0x04,
         (bindAddrInfo as AddressInfo).family === "IPv4" ? 4 : 16,
         stringToUint8Array((bindAddrInfo as AddressInfo).address),
         (bindAddrInfo as AddressInfo).port
@@ -87,15 +86,24 @@ export class Server {
     } catch (e) {
       console.error(e);
 
-      if (stage === STAGE.ADDRESSING && (e as ConnCreateError)) {
+      if (
+        stage === STAGE.METHOD_SELECTION &&
+        (e as Errors.MethodNotSupported)
+      ) {
         if (from._sock.writable) {
-          await from.write(Addressing.SERVER_NOT_AVAIABLE);
+          await from.write(Authentication.NO_ACCEPTABLE_METHODS);
         }
       }
 
-      if (stage === STAGE.ADDRESSING && (e as Errors.UnsupportedMethod)) {
+      if (stage === STAGE.ADDRESSING && (e as ConnCreateError)) {
         if (from._sock.writable) {
-          await from.write(Addressing.METHOD_NOT_SUPPORT);
+          await from.write(Addressing.HOST_UNREACHABLE);
+        }
+      }
+
+      if (stage === STAGE.ADDRESSING && (e as Errors.CommandNotSupport)) {
+        if (from._sock.writable) {
+          await from.write(Addressing.COMMAND_NOT_SUPPORT);
         }
       }
 

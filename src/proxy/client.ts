@@ -4,6 +4,7 @@ import {
   MethodSelection,
   STAGE,
   Authentication,
+  Errors,
 } from "../socks/handshake";
 import { pipe } from "../net/pipe";
 import { createConnection, createServer } from "../net/create";
@@ -42,16 +43,10 @@ export class Client {
 
     try {
       // version identify and method selection
-      stage = STAGE.ADDRESSING;
+      stage = STAGE.METHOD_SELECTION;
       var methodRequest = await MethodSelection.readReq(from);
 
-      var handler = Authentication.selectAuthMethod(methodRequest.getMethod())
-      if (!handler) {
-        await from.write(Authentication.NO_ACCEPTABLE_METHODS);
-        throw new Error(
-          `Auth method not found, supportted methods=${methodRequest.getMethod()}`
-        );
-      }
+      Authentication.selectAuthMethod(methodRequest.getMethod())
 
       to = await this.newConnToSocksServer();
 
@@ -59,12 +54,6 @@ export class Client {
       var methodRep = await MethodSelection.readReply(to);
 
       var handler = Authentication.getAuthHandler(methodRep.getMethod());
-      if (!handler) {
-        await from.write(Authentication.NO_ACCEPTABLE_METHODS);
-        throw new Error(
-          `Auth method not found, method=${methodRep.getMethod()}`
-        );
-      }
       await from.write(methodRep.toBuffer());
 
       // auth check
@@ -84,6 +73,15 @@ export class Client {
       }
     } catch (e) {
       console.log(e);
+
+      if (
+        stage === STAGE.METHOD_SELECTION &&
+        (e as Errors.MethodNotSupported)
+      ) {
+        if (from._sock.writable) {
+          await from.write(Authentication.NO_ACCEPTABLE_METHODS);
+        }
+      }
 
       if (stage === STAGE.ADDRESSING && (e as ServerConnError)) {
         if (from._sock.writable) {

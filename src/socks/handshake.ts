@@ -23,13 +23,19 @@ export enum STAGE {
 export namespace Errors {
   export class IncorrectVersionError extends Error {
     constructor(msg: any) {
-      super(`incorrect version, expect=0x05, actual=${msg}`)
+      super(`incorrect version, expect=0x05, actual=${msg}`);
     }
   }
 
-  export class UnsupportedMethod extends Error {
+  export class CommandNotSupport extends Error {
     constructor(msg: any) {
-      super(`unsupported method, actual=${msg}`)
+      super(`unsupported command, actual=${msg}`);
+    }
+  }
+
+  export class MethodNotSupported extends Error {
+    constructor(msg: any) {
+      super(`unsupported method, actual=${msg}`);
     }
   }
 }
@@ -69,7 +75,7 @@ export namespace MethodSelection {
     // +----+----------+----------+
     var version = await __sock.read(1);
     if (version[0] !== SOCKS5_VERSION) {
-      throw new Errors.IncorrectVersionError(`${version[0]}`)
+      throw new Errors.IncorrectVersionError(`${version[0]}`);
     }
     var n_methods = await __sock.read(1);
     var methods = await __sock.read(n_methods.readInt8());
@@ -109,12 +115,38 @@ export namespace MethodSelection {
 
 export namespace Addressing {
   export const SUCCEED = 0x00;
-  export const CONNECT = 0x03;
+  export const CONNECT = 0x01;
+
+  const hostUnreachable = 0x04;
+  const commandNotSupport = 0x07;
+
   export const SERVER_INTERNAL_ERROR = new Uint8Array([
     0x05, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   ]);
-  export const SERVER_NOT_AVAIABLE = new Uint8Array()
-  export const METHOD_NOT_SUPPORT = new Uint8Array()
+  export const HOST_UNREACHABLE = new Uint8Array([
+    0x05,
+    hostUnreachable,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+  ]);
+  export const COMMAND_NOT_SUPPORT = new Uint8Array([
+    0x05,
+    commandNotSupport,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+  ]);
 
   export class Message {
     private cmd_or_rep: number;
@@ -128,7 +160,7 @@ export namespace Addressing {
       atyp: number,
       addrLength: number,
       dstAddr: Uint8Array,
-      dstPort: number | Buffer,
+      dstPort: number | Buffer
     ) {
       this.cmd_or_rep = cmd_or_rep;
       this.atyp = atyp;
@@ -136,8 +168,8 @@ export namespace Addressing {
       this.dstAddr = dstAddr;
 
       if (typeof dstPort === "number") {
-        this.dstPort = Buffer.alloc(2)
-        this.dstPort.writeUInt16BE(dstPort)
+        this.dstPort = Buffer.alloc(2);
+        this.dstPort.writeUInt16BE(dstPort);
       } else {
         this.dstPort = dstPort;
       }
@@ -237,22 +269,25 @@ export namespace Authentication {
 
   var auth_methods: IAuthMethod[] = [noAuth];
 
-  export function selectAuthMethod(supported: number[]): IAuthMethod | null {
+  export function selectAuthMethod(supported: number[]): IAuthMethod {
     for (var i = 0; i < auth_methods.length; i++) {
-      if (supported.find((val) => val === auth_methods[i].method)) {
-        return auth_methods[i];
+      var authMethod = auth_methods[i].method
+      for (var j = 0; j < supported.length; j++) {
+        if (supported[j] === authMethod) {
+          return auth_methods[i];
+        }
       }
     }
-    return null;
+    throw new Errors.MethodNotSupported(supported);
   }
 
-  export function getAuthHandler(method: number): IAuthMethod | null {
+  export function getAuthHandler(method: number): IAuthMethod {
     for (var i = 0; i < auth_methods.length; i++) {
       if ((auth_methods[i], method === method)) {
         return auth_methods[i];
       }
     }
-    return null;
+    throw new Errors.MethodNotSupported(method);
   }
 }
 

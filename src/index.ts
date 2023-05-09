@@ -1,3 +1,4 @@
+import { Server } from "./proxy/server";
 import { Client } from "./proxy/client";
 import { program } from "commander";
 
@@ -21,5 +22,21 @@ clientCommand
     var client = new Client(cfg);
     await client.start()
   });
+
+var serverCommand = program.command("server");
+serverCommand
+  .requiredOption("--server-ip <value>", "socks5 server ip")
+  .option("--server-port <value>", "socks5 server port", "1080")
+  .action(async (options, command) => {
+    var serverPort = Number(options.serverPort);
+    var cfg = {
+      ip: options.serverIp,
+      port: serverPort,
+    };
+    console.log(`server started. cfg=${JSON.stringify(cfg)}`);
+    var srv = new Server(cfg);
+    await srv.start()
+  });
+
 
 program.parse(process.argv);
