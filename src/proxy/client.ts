@@ -4,6 +4,7 @@ import {
   MethodSelection,
   STAGE,
   Authentication,
+  Errors,
 } from "../socks/handshake";
 import { pipe } from "../net/pipe";
 import { createConnection, createServer } from "../net/create";
@@ -25,7 +26,7 @@ export class Client {
     this._cfg = cfg;
   }
 
-  Start = async () => {
+  start = async () => {
     this._srv = await createServer(this._cfg.clientPort, this._cfg.clientIP);
     this._srv.on("connection", this.onConnection);
   };
@@ -41,32 +42,24 @@ export class Client {
     var stage: STAGE = STAGE.PREPARING;
 
     try {
-      to = await this.newConnToSocksServer();
-    } catch (e) {
-      from.close();
-      return;
-    }
-
-    try {
       // version identify and method selection
-      stage = STAGE.ADDRESSING;
+      stage = STAGE.METHOD_SELECTION;
       var methodRequest = await MethodSelection.readReq(from);
+
+      Authentication.selectAuthMethod(methodRequest.getMethod())
+
+      to = await this.newConnToSocksServer();
+
       await to.write(methodRequest.toBuffer());
       var methodRep = await MethodSelection.readReply(to);
 
+      var handler = Authentication.getAuthHandler(methodRep.getMethod());
+      await from.write(methodRep.toBuffer());
+
       // auth check
       stage = STAGE.AUTHENTICATION;
-      var handler = Authentication.getAuthHandler(methodRep.getMethod());
-      if (!handler) {
-        await from.write(Authentication.NO_ACCEPTABLE_METHODS);
-        throw new Error(
-          `Auth method not found, method=${methodRep.getMethod()}`
-        );
-      }
-      await from.write(methodRep.toBuffer());
-      if (handler.clientHandler) {
-        await handler.clientHandler(from, to);
-      }
+      await handler.clientHandler?.call(from, to);
+      
 
       stage = STAGE.ADDRESSING;
       var addrRequest = await Addressing.readMessage(from);
@@ -81,14 +74,23 @@ export class Client {
     } catch (e) {
       console.log(e);
 
+      if (
+        stage === STAGE.METHOD_SELECTION &&
+        (e as Errors.MethodNotSupported)
+      ) {
+        if (from._sock.writable) {
+          await from.write(Authentication.NO_ACCEPTABLE_METHODS);
+        }
+      }
+
       if (stage === STAGE.ADDRESSING && (e as ServerConnError)) {
         if (from._sock.writable) {
-          from.write(Addressing.SERVER_INTERNAL_ERROR);
+          await from.write(Addressing.SERVER_INTERNAL_ERROR);
         }
       }
 
       from.close();
-      to.close();
+      to?.close();
       return;
     }
 
