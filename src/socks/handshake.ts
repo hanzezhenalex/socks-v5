@@ -27,9 +27,9 @@ export namespace Errors {
     }
   }
 
-  export class UnsupporttedMethod extends Error {
+  export class UnsupportedMethod extends Error {
     constructor(msg: any) {
-      super(`unsupportted method, actual=${msg}`)
+      super(`unsupported method, actual=${msg}`)
     }
   }
 }
@@ -128,13 +128,19 @@ export namespace Addressing {
       atyp: number,
       addrLength: number,
       dstAddr: Uint8Array,
-      dstPort: Buffer
+      dstPort: number | Buffer,
     ) {
       this.cmd_or_rep = cmd_or_rep;
       this.atyp = atyp;
       this.addrLength = addrLength;
       this.dstAddr = dstAddr;
-      this.dstPort = dstPort;
+
+      if (typeof dstPort === "number") {
+        this.dstPort = Buffer.alloc(2)
+        this.dstPort.writeUInt16BE(dstPort)
+      } else {
+        this.dstPort = dstPort;
+      }
     }
 
     needDnsLookUp = (): boolean => {
