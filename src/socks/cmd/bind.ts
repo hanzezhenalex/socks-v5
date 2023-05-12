@@ -8,15 +8,21 @@ import { NetworkUnreachable } from "../errors";
 
 export const Bind = {
   name: "connect",
-  method: 0x01,
+  method: 0x02,
   handler: async (
     ctx: IContext,
     request: CommandNegotiation.Message,
     from: TcpSocket
   ): Promise<Socket> => {
     const srv = await createServer(ctx.getServerAddr());
+
+    // Two replies are sent from the SOCKS server to the client during a BIND operation.
+    // The first is sent after the server creates and binds a new socket.
+    // The BND.PORT field contains the port number that the SOCKS server assigned to listen for an incoming connection.
+    // The BND.ADDR field contains the associated IP address.
     await replySocketAddr(from, srv.address() as AddressInfo);
 
+    // It is expected that a SOCKS server will use DST.ADDR and DST.PORT in evaluating the BIND request.
     const allowedPort = request.getTargetPort();
     const allowedIp = request.needDnsLookUp()
       ? await dnsLoopUp(request.getTargetAddr())
@@ -45,6 +51,7 @@ export const Bind = {
       });
     });
 
+    // The second reply occurs only after the anticipated incoming connection succeeds or fails.
     await replySocketAddr(from, _sock.address() as AddressInfo);
     return _sock;
   },

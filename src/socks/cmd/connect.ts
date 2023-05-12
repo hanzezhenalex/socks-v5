@@ -34,10 +34,9 @@ async function handle(
 
     await replySocketAddr(from, to._sock.address() as AddressInfo)
 
-    console.log(`receive a CONNECT request, 
+    console.log(`receive a CONNECT request, piping now
       source=${JSON.stringify(from._sock.address())}, 
-      target=${request.getTargetAddr()}, 
-      command negotiation finished, start piping`);
+      target=${request.getTargetAddr()}`);
 
     to.stopWatchEvents();
     return to._sock;
