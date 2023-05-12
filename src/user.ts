@@ -4,6 +4,7 @@ import { createConnection } from "./net/stream";
 import net from "net";
 import { pipe } from "./net/pipe";
 import { UserInfo } from "./socks/auth/usrPasswd";
+import {Config} from "./cmd/server";
 
 export interface IContext extends CmdContext, AuthContext {
   pipe(sock1: net.Socket, sock2: net.Socket): void;
@@ -17,9 +18,15 @@ export interface IUserManagement {
 class Context implements IContext {
   private userService: IUserManagement;
   private userInfo: UserInfo | undefined;
+  private cfg: Config;
 
-  constructor(userService: IUserManagement) {
+  constructor(userService: IUserManagement, cfg: Config) {
     this.userService = userService;
+    this.cfg = cfg;
+  }
+
+  getServerAddr = (): string => {
+    return this.cfg.ip
   }
 
   createConnection = (port: number, host?: string): Promise<net.Socket> => {
@@ -35,10 +42,13 @@ class Context implements IContext {
 }
 
 export class UserManagement implements IUserManagement {
-  constructor() {}
+  private readonly cfg: Config
+  constructor(cfg: Config) {
+    this.cfg = cfg
+  }
 
   createUserContext(): Context {
-    return new Context(this);
+    return new Context(this, this.cfg);
   }
 
   verifyUser = async (userInfo: UserInfo): Promise<void> => {
