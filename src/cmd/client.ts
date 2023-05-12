@@ -19,7 +19,7 @@ export class Client {
   }
 
   start = async () => {
-    this._srv = await createServer(this._cfg.clientPort, this._cfg.clientIP);
+    this._srv = await createServer(this._cfg.clientIP, this._cfg.clientPort);
     this._srv.on("connection", this.onConnection);
   };
 

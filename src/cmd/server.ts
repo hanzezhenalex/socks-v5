@@ -17,15 +17,16 @@ import { Connect } from "../socks/cmd/connect";
 import { IAuthHandler } from "../socks/auth/shared";
 import { noAuth } from "../socks/auth/noAuth";
 import {usrPasswd} from "../socks/auth/usrPasswd";
+import {Bind} from "../socks/cmd/bind";
 
-interface Config {
+export interface Config {
   ip: string;
   port: number;
 }
 
 export class Server {
   private _srv: net.Server | undefined;
-  private _cfg: Config;
+  private readonly _cfg: Config;
 
   private auth: IUserManagement;
   private commandHandlers: Map<number, ICommandHandler>;
@@ -35,16 +36,17 @@ export class Server {
     this._cfg = cfg;
     this.commandHandlers = new Map<number, ICommandHandler>();
     this.commandHandlers.set(Connect.method, Connect);
+    this.commandHandlers.set(Bind.method, Bind);
 
     this.authHandler = new Map<number, IAuthHandler>();
     this.authHandler.set(noAuth.method, noAuth);
     this.authHandler.set(usrPasswd.method, usrPasswd)
 
-    this.auth = new UserManagement();
+    this.auth = new UserManagement(this._cfg);
   }
 
   start = async () => {
-    this._srv = await createServer(this._cfg.port, this._cfg.ip);
+    this._srv = await createServer(this._cfg.ip, this._cfg.port);
     this._srv.on("connection", this.onConnection.bind(this));
   };
 
