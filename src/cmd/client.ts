@@ -24,7 +24,7 @@ export class Client {
   };
 
   private newConnToSocksServer = async (): Promise<net.Socket> => {
-    return await createConnection(this._cfg.serverPort, this._cfg.serverIP);
+    return await createConnection(this._cfg.serverPort, this._cfg.serverIP, true);
   };
 
   private onConnection = async (from: net.Socket) => {

@@ -16,12 +16,16 @@ import { ICommandHandler } from "../socks/cmd/shared";
 import { Connect } from "../socks/cmd/connect";
 import { IAuthHandler } from "../socks/auth/shared";
 import { noAuth } from "../socks/auth/noAuth";
-import {usrPasswd} from "../socks/auth/usrPasswd";
-import {Bind} from "../socks/cmd/bind";
+import { usrPasswd } from "../socks/auth/usrPasswd";
+import { Bind } from "../socks/cmd/bind";
+import { readFileSync } from "fs";
 
 export interface Config {
   ip: string;
   port: number;
+  tls: boolean;
+  tlsKeyFile: string;
+  tlsCertFile: string;
 }
 
 export class Server {
@@ -40,13 +44,28 @@ export class Server {
 
     this.authHandler = new Map<number, IAuthHandler>();
     this.authHandler.set(noAuth.method, noAuth);
-    this.authHandler.set(usrPasswd.method, usrPasswd)
+    this.authHandler.set(usrPasswd.method, usrPasswd);
 
     this.auth = new UserManagement(this._cfg);
   }
 
   start = async () => {
-    this._srv = await createServer(this._cfg.ip, this._cfg.port);
+    if (this._cfg.tls) {
+      const options = {
+        key: readFileSync(this._cfg.tlsKeyFile),
+        cert: readFileSync(this._cfg.tlsCertFile),
+        rejectUnauthorized: false,
+      };
+      this._srv = await createServer(
+        this._cfg.ip,
+        this._cfg.port,
+        options,
+        true
+      );
+    } else {
+      this._srv = await createServer(this._cfg.ip, this._cfg.port);
+    }
+
     this._srv.on("connection", this.onConnection.bind(this));
   };
 
