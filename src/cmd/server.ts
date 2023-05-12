@@ -43,7 +43,7 @@ export class Server {
 
   start = async () => {
     this._srv = await createServer(this._cfg.port, this._cfg.ip);
-    this._srv.on("connection", this.onConnection);
+    this._srv.on("connection", this.onConnection.bind(this));
   };
 
   private async onConnection(socket: net.Socket) {
