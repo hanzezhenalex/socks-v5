@@ -1,5 +1,5 @@
-import { Server } from "./proxy/server";
-import { Client } from "./proxy/client";
+import { Server } from "./cmd/server";
+import { Client } from "./cmd/client";
 import { program } from "commander";
 
 var clientCommand = program.command("client");
