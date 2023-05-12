@@ -16,6 +16,7 @@ import { ICommandHandler } from "../socks/cmd/shared";
 import { Connect } from "../socks/cmd/connect";
 import { IAuthHandler } from "../socks/auth/shared";
 import { noAuth } from "../socks/auth/noAuth";
+import {usrPasswd} from "../socks/auth/usrPasswd";
 
 interface Config {
   ip: string;
@@ -37,6 +38,7 @@ export class Server {
 
     this.authHandler = new Map<number, IAuthHandler>();
     this.authHandler.set(noAuth.method, noAuth);
+    this.authHandler.set(usrPasswd.method, usrPasswd)
 
     this.auth = new UserManagement();
   }
