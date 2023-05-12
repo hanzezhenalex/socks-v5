@@ -39,6 +39,11 @@ async function handle(
 
     await from.write(reply.toBuffer());
 
+    console.log(`receive a CONNECT request, 
+      source=${from._sock.address().toString()}, 
+      target=${request.getTargetAddr()}, 
+      command negotiation finished, start piping`);
+
     to.stopWatchEvents();
     return to._sock;
   } catch (e) {
