@@ -74,7 +74,12 @@ export class Server {
       from.stopWatchEvents();
       context.pipe(from._sock, to);
     } catch (e) {
-      console.error(e);
+      console.error(
+        `an error happened when handling socks request from ${socket
+          .address()
+          .toString()}, 
+        error=${(e as Error).message}`
+      );
 
       if (e as SocksError) {
         await (e as SocksError).handle(from);
