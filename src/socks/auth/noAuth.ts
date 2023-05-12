@@ -1,6 +1,7 @@
-const NO_AUTH_RESP = new Uint8Array([0x05, 0x00]);
+import { SOCKS5_VERSION } from "../handshake";
 
 export var noAuth = {
+  name: "noAuth",
   method: 0x00,
-  methodReplyCache: NO_AUTH_RESP,
+  methodReplyCache: new Uint8Array([SOCKS5_VERSION, 0x00]),
 };

@@ -14,7 +14,7 @@ interface SocketEvent {
   emitter: EventEmitter;
 }
 
-export class SocketPromise {
+export class TcpSocket {
   _sock: Socket;
   private waitingReadEvents: SocketEvent[] = [];
   private readBuffer: Buffer | undefined;
@@ -39,7 +39,7 @@ export class SocketPromise {
       .removeListener("end", this.onEnd);
   };
 
-   read(n?: number): Promise<Buffer> {
+  read(n?: number): Promise<Buffer> {
     if (this._hasError || this._hasEnd) {
       return Promise.reject(SOCKET_ERRORS.ERROR_SEND_ON_CLOSED_SOCKET);
     }
@@ -53,21 +53,21 @@ export class SocketPromise {
       }
     }
 
-    var emitter = new EventEmitter();
+    const emitter = new EventEmitter();
     this.waitingReadEvents.push({ n: n ? n : -1, emitter: emitter });
 
     return new Promise((resolve, reject) => {
       emitter.on(socketReadEvent, (response) => resolve(response));
       emitter.on(socketErrorEvent, (err) => reject(err));
     });
-  };
+  }
 
-  write(buffer: Uint8Array | string): Promise<void>  {
+  write(buffer: Uint8Array | string): Promise<void> {
     if (this._hasClosed || this._hasError) {
       return Promise.reject(SOCKET_ERRORS.ERROR_WRITE_ON_CLOSED_SOCKET);
     }
 
-    var emitter = new EventEmitter();
+    const emitter = new EventEmitter();
     this._sock.write(buffer, (err) => emitter.emit(socketErrorEvent, err));
 
     return new Promise((resolve, reject) => {
@@ -75,7 +75,7 @@ export class SocketPromise {
         err ? reject(err) : resolve();
       });
     });
-  };
+  }
 
   close = () => {
     this._sock.writable ? this._sock.end() : null;
@@ -91,13 +91,11 @@ export class SocketPromise {
       this.waitingReadEvents.length > 0 &&
       this.waitingReadEvents[0].n <= this.readBuffer.length
     ) {
-      var ev = this.waitingReadEvents[0];
+      const ev = this.waitingReadEvents[0];
       this.waitingReadEvents = this.waitingReadEvents.slice(1);
 
-      var response =
-        ev.n === -1
-          ? this.getN(this.readBuffer.length)
-          : this.getN(ev.n);
+      const response =
+        ev.n === -1 ? this.getN(this.readBuffer.length) : this.getN(ev.n);
       ev.emitter.emit(socketReadEvent, response);
     }
   };
@@ -117,7 +115,7 @@ export class SocketPromise {
       throw new Error("readBuffer should not be undefined");
     }
 
-    var response: Buffer;
+    let response: Buffer;
 
     if (this.readBuffer.length === n) {
       response = this.readBuffer;

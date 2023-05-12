@@ -8,7 +8,7 @@ export var createConnection = async (
   port: number,
   host?: string
 ): Promise<net.Socket> => {
-  var conn = net.createConnection(port, host);
+  const conn = net.createConnection(port, host);
   return new Promise((resolve, reject) => {
     conn.once("connect", () => {
       resolve(conn);

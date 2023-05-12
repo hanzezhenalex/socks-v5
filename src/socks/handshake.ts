@@ -1,159 +1,79 @@
-import { SocketPromise } from "../net/socket";
+import { TcpSocket } from "../net/socket";
 import { noAuth } from "./auth/noAuth";
+import {
+  AddressTypeNotAllowed,
+  CommandNotSupport,
+  IncorrectVersion,
+  MethodNotSupported,
+} from "./errors";
+import { Connect } from "./cmd/connect";
+import net from "net";
 
 export const SOCKS5_VERSION = 0x05;
 export const RSV_BUFFER = 0x00;
 
-export const CMD_NOT_ALLOWED_RESP = new Uint8Array([
-  0x05, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-]);
-
-export const ERRORS = {
-  ERROR_CMD_NOT_ALLOWED: new Error("Command Not Supported"),
-};
-
 export enum STAGE {
-  PREPARING = 0,
-  METHOD_SELECTION = 1,
-  AUTHENTICATION = 2,
-  ADDRESSING = 3,
-  PIPING = 4,
+  Preparing = 0,
+  MethodNegotiation = 1,
+  Authentication = 2,
+  CommandNegotiation = 3,
+  Piping = 4,
 }
 
-export namespace Errors {
-  export class IncorrectVersionError extends Error {
-    constructor(msg: any) {
-      super(`incorrect version, expect=0x05, actual=${msg}`);
-    }
-  }
-
-  export class CommandNotSupport extends Error {
-    constructor(msg: any) {
-      super(`unsupported command, actual=${msg}`);
-    }
-  }
-
-  export class MethodNotSupported extends Error {
-    constructor(msg: any) {
-      super(`unsupported method, actual=${msg}`);
-    }
-  }
-}
-
-export namespace MethodSelection {
+export namespace MethodNegotiation {
   export class Request {
-    private methods: Uint8Array;
+    private readonly methods: Uint8Array;
 
     constructor(methods: Uint8Array) {
       this.methods = methods;
     }
 
     getMethod = (): number[] => {
-      var ret: number[] = [];
-      for (var i = 0; i < this.methods.length; i++) {
+      const ret: number[] = [];
+      for (let i = 0; i < this.methods.length; i++) {
         ret.push(this.methods[i]);
       }
       return ret;
     };
-
-    toBuffer = (): Uint8Array => {
-      var buffer = new Uint8Array(2 + this.methods.length);
-      buffer[0] = SOCKS5_VERSION;
-      buffer[1] = this.methods.length;
-      for (var i = 0, j = 2; i < this.methods.length; i++, j++) {
-        buffer[j] = this.methods[i];
-      }
-      return buffer;
-    };
   }
 
-  export async function readReq(__sock: SocketPromise): Promise<Request> {
+  export async function readReq(socket: TcpSocket): Promise<Request> {
     // +----+----------+----------+
     // |VER | NMETHODS | METHODS  |
     // +----+----------+----------+
     // | 1  |    1     | 1 to 255 |
     // +----+----------+----------+
-    var version = await __sock.read(1);
+    const version = await socket.read(1);
     if (version[0] !== SOCKS5_VERSION) {
-      throw new Errors.IncorrectVersionError(`${version[0]}`);
+      throw IncorrectVersion;
     }
-    var n_methods = await __sock.read(1);
-    var methods = await __sock.read(n_methods.readInt8());
+    const n_methods = await socket.read(1);
+    const methods = await socket.read(n_methods.readInt8());
     return new Request(methods);
   }
 
-  export class Reply {
-    private method: number;
-
-    constructor(method: number) {
-      this.method = method;
-    }
-
-    getMethod = (): number => {
-      return this.method;
-    };
-
-    toBuffer = (): Uint8Array => {
-      var buffer = new Uint8Array(2);
-      buffer[0] = SOCKS5_VERSION;
-      buffer[1] = this.method;
-      return buffer;
-    };
-  }
-
-  export async function readReply(conn: SocketPromise) {
+  export async function sendRep(
+    socket: TcpSocket,
+    method: number
+  ): Promise<void> {
     // +----+--------+
     // |VER | METHOD |
     // +----+--------+
     // | 1  |   1    |
     // +----+--------+
-    await conn.read(1);
-    var method = await conn.read(1);
-    return new Reply(method[0]);
+    await socket.write(new Uint8Array([SOCKS5_VERSION, method]));
   }
 }
 
-export namespace Addressing {
+export namespace CommandNegotiation {
   export const SUCCEED = 0x00;
-  export const CONNECT = 0x01;
-
-  const hostUnreachable = 0x04;
-  const commandNotSupport = 0x07;
-
-  export const SERVER_INTERNAL_ERROR = new Uint8Array([
-    0x05, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-  ]);
-  export const HOST_UNREACHABLE = new Uint8Array([
-    0x05,
-    hostUnreachable,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-  ]);
-  export const COMMAND_NOT_SUPPORT = new Uint8Array([
-    0x05,
-    commandNotSupport,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-    0x00,
-  ]);
 
   export class Message {
-    private cmd_or_rep: number;
-    private atyp: number;
-    private addrLength: number;
-    private dstAddr: Uint8Array;
-    private dstPort: Buffer;
+    private readonly cmd_or_rep: number;
+    private readonly atyp: number;
+    private readonly addrLength: number;
+    private readonly dstAddr: Uint8Array;
+    private readonly dstPort: Buffer;
 
     constructor(
       cmd_or_rep: number,
@@ -180,11 +100,13 @@ export namespace Addressing {
     };
 
     toBuffer = (): Uint8Array => {
-      var buffer: Uint8Array;
+      let buffer: Uint8Array;
+      let i;
       switch (this.atyp) {
         case 0x01:
           buffer = new Uint8Array(3 + 1 + 4 + 2);
-          for (var i = 4, j = 0; j < 4; i++, j++) {
+          i = 4;
+          for (let j = 0; j < 4; i++, j++) {
             buffer[i] = this.dstAddr[j];
           }
           buffer[8] = this.dstPort[0];
@@ -193,8 +115,8 @@ export namespace Addressing {
         case 0x03:
           buffer = new Uint8Array(3 + 1 + 1 + this.addrLength + 2);
           buffer[4] = this.addrLength;
-          var i = 5;
-          for (var j = 0; j < this.addrLength; i++, j++) {
+          i = 5;
+          for (let j = 0; j < this.addrLength; i++, j++) {
             buffer[i] = this.dstAddr[j];
           }
           buffer[i] = this.dstPort[0];
@@ -202,7 +124,9 @@ export namespace Addressing {
           break;
         case 0x04:
           buffer = new Uint8Array(3 + 1 + 16 + 2);
-          for (var i = 4, j = 0; j < 16; i++, j++) {
+          i = 4;
+
+          for (let j = 0; j < 16; i++, j++) {
             buffer[i] = this.dstAddr[j];
           }
           buffer[20] = this.dstPort[0];
@@ -231,7 +155,24 @@ export namespace Addressing {
     };
   }
 
-  export async function readMessage(conn: SocketPromise): Promise<Message> {
+  async function getAddrLength(
+    atyp: Uint8Array,
+    conn: TcpSocket
+  ): Promise<number> {
+    switch (atyp[0]) {
+      case 0x01:
+        return 1;
+      case 0x03:
+        const length = await conn.read(1);
+        return length.readInt8();
+      case 0x04:
+        return 16;
+      default:
+        throw AddressTypeNotAllowed;
+    }
+  }
+
+  export async function readMessage(conn: TcpSocket): Promise<Message> {
     // Socks Request
     // +----+-----+-------+------+----------+----------+
     // |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
@@ -245,65 +186,15 @@ export namespace Addressing {
     // | 1  |  1  | X'00' |  1   | Variable |    2     |
     // +----+-----+-------+------+----------+----------+
     await conn.read(1);
-    var cmd_or_rep = await conn.read(1);
+    const cmd_or_rep = await conn.read(1);
     await conn.read(1);
 
-    var atyp = await conn.read(1);
-    var addrLength = await getAddrLength(atyp, conn);
+    const atyp = await conn.read(1);
+    const addrLength = await getAddrLength(atyp, conn);
 
-    var dstAddr = await conn.read(addrLength);
-    var dstPort = await conn.read(2);
+    const dstAddr = await conn.read(addrLength);
+    const dstPort = await conn.read(2);
     return new Message(cmd_or_rep[0], atyp[0], addrLength, dstAddr, dstPort);
   }
-}
 
-export namespace Authentication {
-  export const NO_ACCEPTABLE_METHODS = new Uint8Array([0x05, 0xff]);
-
-  interface IAuthMethod {
-    method: number;
-    methodReplyCache: Uint8Array;
-    clientHandler?: Function;
-    serverHandler?: Function;
-  }
-
-  var auth_methods: IAuthMethod[] = [noAuth];
-
-  export function selectAuthMethod(supported: number[]): IAuthMethod {
-    for (var i = 0; i < auth_methods.length; i++) {
-      var authMethod = auth_methods[i].method
-      for (var j = 0; j < supported.length; j++) {
-        if (supported[j] === authMethod) {
-          return auth_methods[i];
-        }
-      }
-    }
-    throw new Errors.MethodNotSupported(supported);
-  }
-
-  export function getAuthHandler(method: number): IAuthMethod {
-    for (var i = 0; i < auth_methods.length; i++) {
-      if ((auth_methods[i], method === method)) {
-        return auth_methods[i];
-      }
-    }
-    throw new Errors.MethodNotSupported(method);
-  }
-}
-
-export async function getAddrLength(
-  atyp: Uint8Array,
-  conn: SocketPromise
-): Promise<number> {
-  switch (atyp[0]) {
-    case 0x01:
-      return 1;
-    case 0x03:
-      var length = await conn.read(1);
-      return length.readInt8();
-    case 0x04:
-      return 16;
-    default:
-      return Promise.reject("Unknown addr type");
-  }
 }
