@@ -13,19 +13,21 @@ export var createConnection = async (
   tls: boolean = false
 ): Promise<net.Socket> => {
   let conn: net.Socket;
-
+  let connectEvent: string;
   if (tls) {
     conn = connect({
       host: host,
       port: port,
       rejectUnauthorized: false,
     });
+    connectEvent = "secureConnect"
   } else {
     conn = net.createConnection(port, host);
+    connectEvent = "connect"
   }
 
   return new Promise((resolve, reject) => {
-    conn.once("connect", () => {
+    conn.once(connectEvent, () => {
       resolve(conn);
       conn.removeAllListeners("error");
     });

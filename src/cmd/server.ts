@@ -50,6 +50,7 @@ export class Server {
   }
 
   start = async () => {
+    let connectEvent: string;
     if (this._cfg.tls) {
       const options = {
         key: readFileSync(this._cfg.tlsKeyFile),
@@ -62,11 +63,13 @@ export class Server {
         options,
         true
       );
+      connectEvent = "secureConnection";
     } else {
       this._srv = await createServer(this._cfg.ip, this._cfg.port);
+      connectEvent = "connection";
     }
 
-    this._srv.on("connection", this.onConnection.bind(this));
+    this._srv.on(connectEvent, this.onConnection.bind(this));
   };
 
   private async onConnection(socket: net.Socket) {
