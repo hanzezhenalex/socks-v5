@@ -156,12 +156,12 @@ export namespace CommandNegotiation {
   }
 
   async function getAddrLength(
-    atyp: Uint8Array,
-    conn: TcpSocket
+      atyp: Uint8Array,
+      conn: { read(n?: number): Promise<Buffer> }
   ): Promise<number> {
     switch (atyp[0]) {
       case 0x01:
-        return 1;
+        return 4;
       case 0x03:
         const length = await conn.read(1);
         return length.readInt8();
@@ -172,7 +172,9 @@ export namespace CommandNegotiation {
     }
   }
 
-  export async function readMessage(conn: TcpSocket): Promise<Message> {
+  export async function readMessage(conn: {
+    read(n?: number): Promise<Buffer>;
+  }): Promise<Message> {
     // Socks Request
     // +----+-----+-------+------+----------+----------+
     // |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
@@ -196,5 +198,4 @@ export namespace CommandNegotiation {
     const dstPort = await conn.read(2);
     return new Message(cmd_or_rep[0], atyp[0], addrLength, dstAddr, dstPort);
   }
-
 }

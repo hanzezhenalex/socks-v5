@@ -1,13 +1,14 @@
-import { IContext as CmdContext } from "./socks/cmd/shared";
+import { Connection, IContext as CmdContext } from "./socks/cmd/shared";
 import { IContext as AuthContext } from "./socks/auth/shared";
 import { createConnection } from "./net/stream";
 import net from "net";
 import { pipe } from "./net/pipe";
 import { UserInfo } from "./socks/auth/usrPasswd";
-import {Config} from "./cmd/server";
+import { Config } from "./cmd/server";
+import * as dgram from "dgram";
 
 export interface IContext extends CmdContext, AuthContext {
-  pipe(sock1: net.Socket, sock2: net.Socket): void;
+  pipe(conn1: net.Socket, conn2: Connection): void;
 }
 
 export interface IUserManagement {
@@ -26,25 +27,41 @@ class Context implements IContext {
   }
 
   getServerAddr = (): string => {
-    return this.cfg.ip
-  }
+    return this.cfg.ip;
+  };
 
   createConnection = (port: number, host?: string): Promise<net.Socket> => {
     return createConnection(port, host);
   };
-  pipe = (sock1: net.Socket, sock2: net.Socket) => {
-    pipe(sock1, sock2);
-  };
+
+  pipe(conn1: net.Socket, conn2: Connection) {
+    if (conn2.socket as net.Socket) {
+      pipe(conn1, conn2.socket as net.Socket);
+      return;
+    }
+    const socket = conn2.socket as dgram.Socket;
+    socket.on("message", conn2.onMessage ? conn2.onMessage : () => {});
+    socket.on("error", (err) => {
+      console.error(err);
+      conn1.end();
+    });
+    conn1.on("end", () => socket.close());
+    conn1.on("error", (err) => {
+      console.error(err);
+      socket.close();
+    });
+  }
+
   verifyUser = async (userInfo: UserInfo): Promise<void> => {
     await this.userService.verifyUser(userInfo);
-    this.userInfo = userInfo
+    this.userInfo = userInfo;
   };
 }
 
 export class UserManagement implements IUserManagement {
-  private readonly cfg: Config
+  private readonly cfg: Config;
   constructor(cfg: Config) {
-    this.cfg = cfg
+    this.cfg = cfg;
   }
 
   createUserContext(): Context {
@@ -52,6 +69,6 @@ export class UserManagement implements IUserManagement {
   }
 
   verifyUser = async (userInfo: UserInfo): Promise<void> => {
-    console.debug(`user ${userInfo.username} ask for verification`)
+    console.debug(`user ${userInfo.username} ask for verification`);
   };
 }

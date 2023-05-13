@@ -1,12 +1,10 @@
-import {
-  ConnCreateError,
-} from "../../net/stream";
+import { ConnCreateError } from "../../net/stream";
 import { DnsError, dnsLoopUp } from "../../net/dns";
-import { Socket, AddressInfo } from "net";
+import { AddressInfo } from "net";
 import { CommandNegotiation } from "../handshake";
 import { TcpSocket } from "../../net/socket";
 import { HostUnreachable, NetworkUnreachable } from "../errors";
-import {IContext, replySocketAddr} from "./shared";
+import { Connection, IContext, replySocketAddr } from "./shared";
 
 export const Connect = {
   name: "connect",
@@ -18,7 +16,7 @@ async function handle(
   ctx: IContext,
   request: CommandNegotiation.Message,
   from: TcpSocket
-): Promise<Socket> {
+): Promise<Connection> {
   let to: TcpSocket | undefined;
   try {
     to = new TcpSocket(
@@ -30,14 +28,14 @@ async function handle(
       )
     );
 
-    await replySocketAddr(from, to._sock.address() as AddressInfo)
+    await replySocketAddr(from, to._sock.address() as AddressInfo);
 
     console.log(`receive a CONNECT request, piping now
       source=${JSON.stringify(from._sock.address())}, 
       target=${request.getTargetAddr()}`);
 
     to.stopWatchEvents();
-    return to._sock;
+    return { socket: to._sock };
   } catch (e) {
     to?.close();
     if (e as ConnCreateError) {
