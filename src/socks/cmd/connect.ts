@@ -1,7 +1,5 @@
-// try to create connection to target server
 import {
   ConnCreateError,
-  parseIP,
 } from "../../net/stream";
 import { DnsError, dnsLoopUp } from "../../net/dns";
 import { Socket, AddressInfo } from "net";

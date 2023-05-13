@@ -1,4 +1,5 @@
-import net from "net";
+import net, { ServerOpts } from "net";
+import { connect, createServer as createTLSServer, TlsOptions } from "tls";
 
 export class ConnCreateError extends Error {
   constructor(msg: any) {
@@ -8,11 +9,25 @@ export class ConnCreateError extends Error {
 
 export var createConnection = async (
   port: number,
-  host?: string
+  host?: string,
+  tls: boolean = false
 ): Promise<net.Socket> => {
-  const conn = net.createConnection(port, host);
+  let conn: net.Socket;
+  let connectEvent: string;
+  if (tls) {
+    conn = connect({
+      host: host,
+      port: port,
+      rejectUnauthorized: false,
+    });
+    connectEvent = "secureConnect"
+  } else {
+    conn = net.createConnection(port, host);
+    connectEvent = "connect"
+  }
+
   return new Promise((resolve, reject) => {
-    conn.once("connect", () => {
+    conn.once(connectEvent, () => {
       resolve(conn);
       conn.removeAllListeners("error");
     });
@@ -26,9 +41,17 @@ export var createConnection = async (
 export var createServer = async (
   host: string,
   port?: number,
-  options?: net.ServerOpts
+  options?: TlsOptions,
+  tls: boolean = false
 ): Promise<net.Server> => {
-  const srv = net.createServer(options);
+  let srv: net.Server;
+
+  if (tls && options) {
+    srv = createTLSServer(options);
+  } else {
+    srv = net.createServer(options as ServerOpts);
+  }
+
   srv.listen(port, host);
   return new Promise((resolve, reject) => {
     srv.once("listening", () => {
