@@ -19,7 +19,7 @@ import { noAuth } from "../socks/auth/noAuth";
 import { usrPasswd } from "../socks/auth/usrPasswd";
 import { Bind } from "../socks/cmd/bind";
 import { readFileSync } from "fs";
-import {UdpAssociate} from "../socks/cmd/udpAssociate";
+import { UdpAssociate } from "../socks/cmd/udpAssociate";
 
 export interface Config {
   ip: string;

@@ -35,6 +35,12 @@ export const UdpAssociate = {
           })
         ) {
           const req = await messageFromBuffer(msg);
+          if (req.frag != 0x00) {
+            // Implementation of fragmentation is optional; an implementation that
+            // does not support fragmentation MUST drop any datagram whose FRAG
+            // field is other than 0x00.
+            return;
+          }
           socket.send(req.data, req.dstPort, req.dstAddr);
         } else {
           const headerBuffer = new CommandNegotiation.Message(

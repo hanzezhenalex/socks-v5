@@ -69,6 +69,7 @@ export namespace CommandNegotiation {
   export const SUCCEED = 0x00;
 
   export class Message {
+    private readonly frag: number;
     private readonly cmd_or_rep: number;
     private readonly atyp: number;
     private readonly addrLength: number;
@@ -80,12 +81,14 @@ export namespace CommandNegotiation {
       atyp: number,
       addrLength: number,
       dstAddr: Uint8Array,
-      dstPort: number | Buffer
+      dstPort: number | Buffer,
+      frag: number = RSV_BUFFER,
     ) {
       this.cmd_or_rep = cmd_or_rep;
       this.atyp = atyp;
       this.addrLength = addrLength;
       this.dstAddr = dstAddr;
+      this.frag = frag;
 
       if (typeof dstPort === "number") {
         this.dstPort = Buffer.alloc(2);
@@ -189,13 +192,13 @@ export namespace CommandNegotiation {
     // +----+-----+-------+------+----------+----------+
     await conn.read(1);
     const cmd_or_rep = await conn.read(1);
-    await conn.read(1);
+    const rsv_or_frag = await conn.read(1); // rsv or frag
 
     const atyp = await conn.read(1);
     const addrLength = await getAddrLength(atyp, conn);
 
     const dstAddr = await conn.read(addrLength);
     const dstPort = await conn.read(2);
-    return new Message(cmd_or_rep[0], atyp[0], addrLength, dstAddr, dstPort);
+    return new Message(cmd_or_rep[0], atyp[0], addrLength, dstAddr, dstPort, rsv_or_frag[0]);
   }
 }
