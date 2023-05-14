@@ -1,4 +1,9 @@
-import {Connection, getAddrChecker, IContext, replySocketAddr} from "./shared";
+import {
+  Connection,
+  getAddrChecker,
+  IContext,
+  replySocketAddr,
+} from "./shared";
 import { CommandNegotiation } from "../handshake";
 import { TcpSocket } from "../../net/socket";
 import { AddressInfo, Socket } from "net";
@@ -21,7 +26,7 @@ export const Bind = {
     // The BND.ADDR field contains the associated IP address.
     await replySocketAddr(from, srv.address() as AddressInfo);
 
-    const isTargetAddr = await getAddrChecker(request)
+    const isTargetAddr = await getAddrChecker(request);
 
     const _sock = await new Promise<Socket>((resolve, reject) => {
       srv.on("connection", (socket) => {
@@ -41,6 +46,6 @@ export const Bind = {
 
     // The second reply occurs only after the anticipated incoming connection succeeds or fails.
     await replySocketAddr(from, _sock.address() as AddressInfo);
-    return { socket: _sock };
+    return { socket: _sock, _type: "tcp" };
   },
 };

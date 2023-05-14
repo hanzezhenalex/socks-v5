@@ -154,10 +154,14 @@ describe("UDP ASSOCIATE", async () => {
 
     // echo
     updSock.send(testString, echoServerPort, echoServerIP);
-    updSock.once("message", (msg, info) => {
-      assert(msg.toString() === testString);
-    });
-
+    await new Promise<void>((resolve, reject) => {
+      updSock.once("message", (msg, info) => {
+        assert(msg.toString() === testString);
+        resolve();
+      });
+      updSock.once("error", (err) => reject(err))
+    })
+    
     updSock.close();
   });
 });

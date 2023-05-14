@@ -75,8 +75,8 @@ export class Server {
   };
 
   close = () => {
-    this._srv?.close()
-  }
+    this._srv?.close();
+  };
 
   private async onConnection(socket: net.Socket) {
     const from = new TcpSocket(socket);
@@ -109,9 +109,9 @@ export class Server {
       console.error(
         `an error happened when handling socks request from ${socket
           .address()
-          .toString()}, 
-        error=${(e as Error).message}`
+          .toString()}`
       );
+      console.error(e);
 
       if (e as SocksError) {
         await (e as SocksError).handle(from);
