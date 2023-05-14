@@ -20,10 +20,10 @@ export var createConnection = async (
       port: port,
       rejectUnauthorized: false,
     });
-    connectEvent = "secureConnect"
+    connectEvent = "secureConnect";
   } else {
     conn = net.createConnection(port, host);
-    connectEvent = "connect"
+    connectEvent = "connect";
   }
 
   return new Promise((resolve, reject) => {
@@ -64,6 +64,17 @@ export var createServer = async (
     });
   });
 };
+
+export function decodeIPv4(ip: Uint8Array): string {
+  let buffer = Buffer.from(ip);
+  let ret: string = "";
+  for (let i = 0; i < 4; i++) {
+    ret += buffer.readUInt8().toString();
+    buffer = buffer.subarray(1)
+    ret += ".";
+  }
+  return ret.substring(0, ret.length - 1);
+}
 
 function parseIPv4(ip: string): Uint8Array {
   const ret = new Uint8Array(4);

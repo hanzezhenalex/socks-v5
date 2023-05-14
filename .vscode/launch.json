@@ -41,6 +41,23 @@
                 "8090"
             ],
             "preLaunchTask": "compile and copy",
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Run Current Test",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "args": [
+                "--timeout",
+                "60",
+                "--colors",
+                "${workspaceFolder}/dist/test/*.spec.js"
+
+            ],
+            "preLaunchTask": "compile and copy",
         }
     ]
 }
