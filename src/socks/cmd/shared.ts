@@ -20,8 +20,11 @@ export interface ICommandHandler {
   ): Promise<Connection>;
 }
 
+type SocketTyp = "udp" | "tcp"
+
 export interface Connection {
   socket: udp.Socket | net.Socket;
+  _type: SocketTyp;
   onMessage?(msg: Buffer, info: RemoteInfo): void;
 }
 

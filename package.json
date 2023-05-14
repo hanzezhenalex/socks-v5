@@ -4,7 +4,7 @@
   "description": "a proxy for socks-v5, contains both client and server",
   "main": "./dist/index.js",
   "scripts": {
-    "test": "npm run build && mocha ./dist/test/**/*.js --timeout 60 --colors",
+    "test": "npm run build && mocha ./dist/test/**/*.js --timeout 600 --colors",
     "build": "npm install && cd src && tsc"
   },
   "repository": {

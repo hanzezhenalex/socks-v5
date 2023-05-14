@@ -25,6 +25,7 @@ export const UdpAssociate = {
     const isClientUDPAddr = await getAddrChecker(request);
 
     return {
+      _type: "udp",
       socket: socket,
       async onMessage(msg: Buffer, info: RemoteInfo) {
         if (

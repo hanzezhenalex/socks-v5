@@ -35,7 +35,7 @@ class Context implements IContext {
   };
 
   pipe(conn1: net.Socket, conn2: Connection) {
-    if (conn2.socket as net.Socket) {
+    if (conn2._type === "tcp") {
       pipe(conn1, conn2.socket as net.Socket);
       return;
     }

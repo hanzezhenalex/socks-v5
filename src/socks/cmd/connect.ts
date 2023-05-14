@@ -35,7 +35,7 @@ async function handle(
       target=${request.getTargetAddr()}`);
 
     to.stopWatchEvents();
-    return { socket: to._sock };
+    return { socket: to._sock, _type: "tcp" };
   } catch (e) {
     to?.close();
     if (e as ConnCreateError) {
