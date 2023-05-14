@@ -19,6 +19,7 @@ import { noAuth } from "../socks/auth/noAuth";
 import { usrPasswd } from "../socks/auth/usrPasswd";
 import { Bind } from "../socks/cmd/bind";
 import { readFileSync } from "fs";
+import { UdpAssociate } from "../socks/cmd/udpAssociate";
 
 export interface Config {
   ip: string;
@@ -41,6 +42,7 @@ export class Server {
     this.commandHandlers = new Map<number, ICommandHandler>();
     this.commandHandlers.set(Connect.method, Connect);
     this.commandHandlers.set(Bind.method, Bind);
+    this.commandHandlers.set(UdpAssociate.method, UdpAssociate);
 
     this.authHandler = new Map<number, IAuthHandler>();
     this.authHandler.set(noAuth.method, noAuth);
