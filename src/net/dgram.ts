@@ -13,7 +13,7 @@ export var createSocket = (
   return new Promise((resolve, reject) => {
     socket.once("listening", () => {
       resolve(socket);
-      socket.removeAllListeners("error")
+      socket.removeAllListeners("error");
     });
     socket.once("error", (err) => {
       reject(new ConnCreateError(err));
