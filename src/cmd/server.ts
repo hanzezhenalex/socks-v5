@@ -74,6 +74,10 @@ export class Server {
     this._srv.on(connectEvent, this.onConnection.bind(this));
   };
 
+  close = () => {
+    this._srv?.close()
+  }
+
   private async onConnection(socket: net.Socket) {
     const from = new TcpSocket(socket);
     let stage: STAGE = STAGE.Preparing;

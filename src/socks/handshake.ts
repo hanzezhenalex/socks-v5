@@ -8,6 +8,7 @@ import {
 } from "./errors";
 import { Connect } from "./cmd/connect";
 import net from "net";
+import { decodeIPv4, parseIP } from "../net/stream";
 
 export const SOCKS5_VERSION = 0x05;
 export const RSV_BUFFER = 0x00;
@@ -68,6 +69,10 @@ export namespace MethodNegotiation {
 export namespace CommandNegotiation {
   export const SUCCEED = 0x00;
 
+  export const IPv4 = 0x01;
+  export const DomainName = 0x03;
+  export const IPv6 = 0x04;
+
   export class Message {
     private readonly frag: number;
     private readonly cmd_or_rep: number;
@@ -82,7 +87,7 @@ export namespace CommandNegotiation {
       addrLength: number,
       dstAddr: Uint8Array,
       dstPort: number | Buffer,
-      frag: number = RSV_BUFFER,
+      frag: number = RSV_BUFFER
     ) {
       this.cmd_or_rep = cmd_or_rep;
       this.atyp = atyp;
@@ -106,7 +111,7 @@ export namespace CommandNegotiation {
       let buffer: Uint8Array;
       let i;
       switch (this.atyp) {
-        case 0x01:
+        case IPv4:
           buffer = new Uint8Array(3 + 1 + 4 + 2);
           i = 4;
           for (let j = 0; j < 4; i++, j++) {
@@ -115,7 +120,7 @@ export namespace CommandNegotiation {
           buffer[8] = this.dstPort[0];
           buffer[9] = this.dstPort[1];
           break;
-        case 0x03:
+        case DomainName:
           buffer = new Uint8Array(3 + 1 + 1 + this.addrLength + 2);
           buffer[4] = this.addrLength;
           i = 5;
@@ -125,7 +130,7 @@ export namespace CommandNegotiation {
           buffer[i] = this.dstPort[0];
           buffer[i + 1] = this.dstPort[1];
           break;
-        case 0x04:
+        case IPv6:
           buffer = new Uint8Array(3 + 1 + 16 + 2);
           i = 4;
 
@@ -154,13 +159,20 @@ export namespace CommandNegotiation {
     };
 
     getTargetAddr = (): string => {
-      return this.dstAddr.toString();
+      switch (this.atyp) {
+        case DomainName:
+          return this.dstAddr.toString();
+        case IPv4:
+          return decodeIPv4(this.dstAddr);
+        default:
+          throw new Error("Unknown addr type");
+      }
     };
   }
 
   async function getAddrLength(
-      atyp: Uint8Array,
-      conn: { read(n?: number): Promise<Buffer> }
+    atyp: Uint8Array,
+    conn: { read(n?: number): Promise<Buffer> }
   ): Promise<number> {
     switch (atyp[0]) {
       case 0x01:
@@ -199,6 +211,13 @@ export namespace CommandNegotiation {
 
     const dstAddr = await conn.read(addrLength);
     const dstPort = await conn.read(2);
-    return new Message(cmd_or_rep[0], atyp[0], addrLength, dstAddr, dstPort, rsv_or_frag[0]);
+    return new Message(
+      cmd_or_rep[0],
+      atyp[0],
+      addrLength,
+      dstAddr,
+      dstPort,
+      rsv_or_frag[0]
+    );
   }
 }
