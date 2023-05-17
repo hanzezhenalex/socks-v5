@@ -45,7 +45,11 @@ export const Bind = {
     });
 
     // The second reply occurs only after the anticipated incoming connection succeeds or fails.
-    await replySocketAddr(from, _sock.address() as AddressInfo);
+    await replySocketAddr(from, {
+      address: _sock.remoteAddress ? _sock.remoteAddress : "",
+      family: _sock.remoteFamily ? _sock.remoteFamily : "",
+      port: _sock.remotePort ? _sock.remotePort : 0,
+    });
     return { socket: _sock, _type: "tcp" };
   },
 };
