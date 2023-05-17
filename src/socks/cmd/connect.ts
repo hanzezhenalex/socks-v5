@@ -31,7 +31,7 @@ async function handle(
     await replySocketAddr(from, to._sock.address() as AddressInfo);
 
     console.log(`receive a CONNECT request, piping now
-      source=${JSON.stringify(from._sock.address())}, 
+      source=${from._sock.remoteAddress}:${from._sock.remotePort}, 
       target=${request.getTargetAddr()}`);
 
     to.stopWatchEvents();
