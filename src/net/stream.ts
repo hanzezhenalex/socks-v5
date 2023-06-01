@@ -70,13 +70,13 @@ export function decodeIPv4(ip: Uint8Array): string {
   let ret: string = "";
   for (let i = 0; i < 4; i++) {
     ret += buffer.readUInt8().toString();
-    buffer = buffer.subarray(1)
+    buffer = buffer.subarray(1);
     ret += ".";
   }
   return ret.substring(0, ret.length - 1);
 }
 
-function parseIPv4(ip: string): Uint8Array {
+function encodeIPv4(ip: string): Uint8Array {
   const ret = new Uint8Array(4);
   const subs = ip.split(".", 4);
   for (let i = 0; i < subs.length; i++) {
@@ -85,7 +85,7 @@ function parseIPv4(ip: string): Uint8Array {
   return ret;
 }
 
-function parseIPv6(ip: string): Uint8Array {
+function encodeIPv6(ip: string): Uint8Array {
   const ret = new Uint8Array(16);
   const nums = ip.split(":", 8);
   for (let i = 0; i < nums.length; i += 2) {
@@ -96,14 +96,14 @@ function parseIPv6(ip: string): Uint8Array {
   return ret;
 }
 
-export function parseIP(ip: string): Uint8Array {
+export function encodeIP(ip: string): Uint8Array {
   const family = net.isIP(ip);
 
   switch (family) {
     case 4:
-      return parseIPv4(ip);
+      return encodeIPv4(ip);
     case 6:
-      return parseIPv6(ip);
+      return encodeIPv6(ip);
     default:
       throw new Error("illegal ip family");
   }

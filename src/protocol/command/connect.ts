@@ -4,31 +4,33 @@ import { AddressInfo } from "net";
 import { CommandNegotiation } from "../handshake";
 import { TcpSocket } from "../../net/socket";
 import { HostUnreachable, NetworkUnreachable } from "../errors";
-import { Connection, IContext, replySocketAddr } from "./shared";
+import { Context } from "../../context";
+import { Connection, ConnectionManager } from "../../connectionManager";
+import { sendAddressInfo } from "./shared";
 
-export const Connect = {
+export const handler = {
   name: "connect",
   method: 0x01,
-  handler: handle,
+  handle: handle,
 };
 
 async function handle(
-  ctx: IContext,
+  ctx: Context,
   request: CommandNegotiation.Message,
-  from: TcpSocket
+  from: TcpSocket,
+  proxy: ConnectionManager
 ): Promise<Connection> {
   let to: TcpSocket | undefined;
   try {
-    to = new TcpSocket(
-      await ctx.createConnection(
-        request.getTargetPort(),
-        request.needDnsLookUp()
-          ? await dnsLoopUp(request.getTargetAddr())
-          : request.getTargetAddr()
-      )
+    to = await proxy.createTcpConnection(
+      ctx,
+      request.getTargetPort(),
+      request.needDnsLookUp()
+        ? await dnsLoopUp(request.getTargetAddr())
+        : request.getTargetAddr()
     );
 
-    await replySocketAddr(from, to._sock.address() as AddressInfo);
+    await sendAddressInfo(from, to._sock.address() as AddressInfo);
 
     console.log(`receive a CONNECT request, piping now
       source=${from._sock.remoteAddress}:${from._sock.remotePort}, 

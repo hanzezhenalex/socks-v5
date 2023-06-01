@@ -1,27 +1,28 @@
-import {
-  Connection,
-  getAddrChecker,
-  IContext,
-  replySocketAddr,
-} from "./shared";
 import { CommandNegotiation } from "../handshake";
 import { TcpSocket } from "../../net/socket";
 import { RemoteInfo } from "dgram";
 import { createSocket } from "../../net/dgram";
 import readMessage = CommandNegotiation.readMessage;
 import { dnsLoopUp } from "../../net/dns";
-import { parseIP } from "../../net/stream";
+import { encodeIP } from "../../net/stream";
+import { Context } from "../../context";
+import { getAddrChecker, sendAddressInfo } from "./shared";
+import { Connection } from "../../connectionManager";
+import IPv4 = CommandNegotiation.IPv4;
+import IPv6 = CommandNegotiation.IPv6;
+import IPv4AddrLen = CommandNegotiation.IPv4AddrLen;
+import IPv6AddrLen = CommandNegotiation.IPv6AddrLen;
 
-export const UdpAssociate = {
+export const handler = {
   name: "udp associate",
   method: 0x03,
   handler: async (
-    ctx: IContext,
+    ctx: Context,
     request: CommandNegotiation.Message,
     from: TcpSocket
   ): Promise<Connection> => {
-    const socket = await createSocket(ctx.getServerAddr());
-    await replySocketAddr(from, socket.address());
+    const socket = await createSocket(ctx.serverAddr);
+    await sendAddressInfo(from, socket.address());
     const isClientUDPAddr = await getAddrChecker(request);
 
     return {
@@ -46,9 +47,9 @@ export const UdpAssociate = {
         } else {
           const headerBuffer = new CommandNegotiation.Message(
             0,
-            info.family === "IPv4" ? 0x01 : 0x04,
-            info.family === "IPv4" ? 4 : 16,
-            parseIP(info.address),
+            info.family === "IPv4" ? IPv4 : IPv6,
+            info.family === "IPv4" ? IPv4AddrLen : IPv6AddrLen,
+            encodeIP(info.address),
             info.port
           ).toBuffer();
           socket.send(

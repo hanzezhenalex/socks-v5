@@ -1,5 +1,3 @@
-import { Server } from "./cmd/server";
-import { Client } from "./cmd/client";
 import { program } from "commander";
 
 const clientCommand = program.command("client");
@@ -19,8 +17,6 @@ clientCommand
       serverPort: serverPort,
     };
     console.log(`client started. cfg=${JSON.stringify(cfg)}`);
-    const client = new Client(cfg);
-    await client.start();
   });
 
 const serverCommand = program.command("server");
@@ -40,8 +36,6 @@ serverCommand
       tlsCertFile: options.tlsCertFile,
     };
     console.log(`server started. cfg=${JSON.stringify(cfg)}`);
-    const srv = new Server(cfg);
-    await srv.start();
   });
 
 program.parse(process.argv);

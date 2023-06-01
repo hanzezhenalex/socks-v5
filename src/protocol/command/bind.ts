@@ -1,30 +1,27 @@
-import {
-  Connection,
-  getAddrChecker,
-  IContext,
-  replySocketAddr,
-} from "./shared";
 import { CommandNegotiation } from "../handshake";
 import { TcpSocket } from "../../net/socket";
 import { AddressInfo, Socket } from "net";
 import { createServer } from "../../net/stream";
 import { NetworkUnreachable } from "../errors";
+import { getAddrChecker, sendAddressInfo } from "./shared";
+import { Context } from "../../context";
+import { Connection } from "../../connectionManager";
 
-export const Bind = {
+export const handler = {
   name: "connect",
   method: 0x02,
-  handler: async (
-    ctx: IContext,
+  handle: async (
+    ctx: Context,
     request: CommandNegotiation.Message,
     from: TcpSocket
   ): Promise<Connection> => {
-    const srv = await createServer(ctx.getServerAddr());
+    const srv = await createServer(ctx.serverAddr);
 
     // Two replies are sent from the SOCKS server to the client during a BIND operation.
     // The first is sent after the server creates and binds a new socket.
     // The BND.PORT field contains the port number that the SOCKS server assigned to listen for an incoming connection.
     // The BND.ADDR field contains the associated IP address.
-    await replySocketAddr(from, srv.address() as AddressInfo);
+    await sendAddressInfo(from, srv.address() as AddressInfo);
 
     const isTargetAddr = await getAddrChecker(request);
 
@@ -45,7 +42,7 @@ export const Bind = {
     });
 
     // The second reply occurs only after the anticipated incoming connection succeeds or fails.
-    await replySocketAddr(from, {
+    await sendAddressInfo(from, {
       address: _sock.remoteAddress ? _sock.remoteAddress : "",
       family: _sock.remoteFamily ? _sock.remoteFamily : "",
       port: _sock.remotePort ? _sock.remotePort : 0,
