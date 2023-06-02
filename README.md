@@ -1,23 +1,25 @@
 # socks-v5
 a proxy for socks-v5, support CONNECT/BIND/UDP ASSOCIATE
 
+# Arch
+In the design, we'll have two mode, local and cluster. (cluster mode is not support yet)
+
+For local mode, we only deploy one agent in the target server. The agent will proxy the socks request (via TCP connection) and manage auth/resource itself.
+
+
+For cluster mode, we have three services. 
+Agent is installed in the customer machine, handling the protocol and sending requests for permission/proxy. 
+Coordinator is deployed in one of our instances, communicating with agents, checking the permission, layoff the requests...
+Proxy is deployed in each of our instances which actually transfer the network traffic.
+
+
 # Usage
+## local mode
 Build the program first.
 ```shell
 npm run build
 ```
-Start a standard tcp-based server:
-```shell
-cd ./dist && node index.js server --server-ip <local-ip> --server-port <local-port>
-```
-In this mode, client directly connects to socks server via a tcp connection.
-<br>If you want tls, then you need to start a socks client locally and a socks server.
-```shell
-# for client
-cd ./dist && node index.js client --server-ip <remote-server-ip> --server-port <remote-server-port> --client-ip <local-client-ip> --client-port <local-client-port>
-# for server
-cd ./dist && node index.js server --server-ip <local-ip> --server-port <local-port> --tls
-```
+
 
 # reference 
 SocksV5 RFC: https://www.rfc-editor.org/rfc/rfc1928

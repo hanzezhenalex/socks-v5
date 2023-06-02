@@ -1,42 +1,32 @@
-import net, { AddressInfo } from "net";
-import { TcpSocket } from "../../net/socket";
+import { Context } from "../../context";
 import { CommandNegotiation } from "../handshake";
-import { parseIP } from "../../net/stream";
+import { TcpSocket } from "../../net/socket";
+import net, { AddressInfo } from "net";
+import { Connection, ConnectionManager } from "../../connectionManager";
+import { encodeIP } from "../../net/stream";
 import { dnsLoopUp } from "../../net/dns";
-import udp, { RemoteInfo } from "dgram";
+import { IPv4, IPv4AddrLen, IPv6, IPv6AddrLen, succeed } from "../constant";
 
-export interface IContext {
-  createConnection(port: number, host?: string): Promise<net.Socket>;
-  getServerAddr(): string;
-}
-
-export interface ICommandHandler {
+export interface CommandHandler {
   name: string;
   method: number;
-  handler(
-    ctx: IContext,
-    request: CommandNegotiation.Message,
-    from: TcpSocket
+  handle(
+    ctx: Context,
+    req: CommandNegotiation.Message,
+    from: TcpSocket,
+    proxy: ConnectionManager
   ): Promise<Connection>;
 }
 
-type SocketTyp = "udp" | "tcp"
-
-export interface Connection {
-  socket: udp.Socket | net.Socket;
-  _type: SocketTyp;
-  onMessage?(msg: Buffer, info: RemoteInfo): void;
-}
-
-export async function replySocketAddr(
+export async function sendAddressInfo(
   from: TcpSocket,
   bindAddrInfo: net.AddressInfo
 ) {
   const reply = new CommandNegotiation.Message(
-    CommandNegotiation.SUCCEED,
-    (bindAddrInfo as AddressInfo).family === "IPv4" ? 0x01 : 0x04,
-    (bindAddrInfo as AddressInfo).family === "IPv4" ? 4 : 16,
-    parseIP((bindAddrInfo as AddressInfo).address),
+    succeed,
+    (bindAddrInfo as AddressInfo).family === "IPv4" ? IPv4 : IPv6,
+    (bindAddrInfo as AddressInfo).family === "IPv4" ? IPv4AddrLen : IPv6AddrLen,
+    encodeIP((bindAddrInfo as AddressInfo).address),
     (bindAddrInfo as AddressInfo).port
   );
 

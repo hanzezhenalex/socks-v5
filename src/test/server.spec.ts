@@ -1,16 +1,23 @@
 import { assert } from "chai";
 import { TcpSocket } from "../net/socket";
-import { createConnection, createServer, parseIP } from "../net/stream";
-import { CommandNegotiation, SOCKS5_VERSION } from "../socks/handshake";
-import { noAuth } from "../socks/auth/noAuth";
-import { Connect } from "../socks/cmd/connect";
-import { Server } from "../cmd/server";
+import { createConnection, createServer, encodeIP } from "../net/stream";
+import { CommandNegotiation } from "../protocol/handshake";
+import { handler as noAuth } from "../protocol/auth/noAuth";
+import { handler as Connect } from "../protocol/command/connect";
+import { Agent, AgentMode } from "../agent";
 import net from "net";
 import * as dgram from "dgram";
 import { createSocket } from "../net/dgram";
-import { UdpAssociate } from "../socks/cmd/udpAssociate";
+import { handler as UdpAssociate } from "../protocol/command/udpAssociate";
 import readMessage = CommandNegotiation.readMessage;
-import SUCCEED = CommandNegotiation.SUCCEED;
+import { AuthManagement } from "../authManager";
+import { ConnectionManagement } from "../connectionManager";
+import {
+  IPv4,
+  IPv4AddrLen,
+  socks5Version,
+  succeed,
+} from "../protocol/constant";
 
 const socksServerIp = "127.0.0.1";
 const socksServerPort = 9090;
@@ -43,27 +50,27 @@ async function startUdpEchoServer(
   return socket;
 }
 
-async function startSocksServer(): Promise<Server> {
+async function startSocksAgent(): Promise<Agent> {
   const cfg = {
-    ip: socksServerIp,
-    port: socksServerPort,
-    tls: false,
-    tlsKeyFile: "",
-    tlsCertFile: "",
+    localIP: socksServerIp,
+    localPort: socksServerPort,
+    commands: ["connect", "udpAssociate", "bind"],
+    auths: ["noAuth"],
+    mode: "local" as AgentMode,
   };
-  const srv = new Server(cfg);
+  const srv = new Agent(cfg, new AuthManagement(), new ConnectionManagement());
   await srv.start();
   return srv;
 }
 
 describe("CONNECT", async () => {
   let echoSrv: net.Server;
-  let socksSrv: Server;
+  let socksSrv: Agent;
   let socket: TcpSocket;
 
   beforeEach(async () => {
     echoSrv = await startTcpEchoServer(echoServerIP, echoServerPort);
-    socksSrv = await startSocksServer();
+    socksSrv = await startSocksAgent();
     socket = new TcpSocket(
       await createConnection(socksServerPort, socksServerIp)
     );
@@ -78,9 +85,9 @@ describe("CONNECT", async () => {
   it("noAuth", async () => {
     let reply: Buffer;
     // method
-    await socket.write(new Uint8Array([SOCKS5_VERSION, 0x01, 0x00])); // only one method provided
+    await socket.write(new Uint8Array([socks5Version, 0x01, 0x00])); // only one method provided
     reply = await socket.read(2);
-    assert(reply[0] === SOCKS5_VERSION);
+    assert(reply[0] === socks5Version);
     assert(reply[1] === noAuth.method);
 
     // command
@@ -88,13 +95,13 @@ describe("CONNECT", async () => {
       Connect.method,
       0x01,
       4,
-      parseIP(echoServerIP),
+      encodeIP(echoServerIP),
       echoServerPort
     );
     await socket.write(msg.toBuffer());
     reply = await socket.read();
-    assert(reply[0] === SOCKS5_VERSION);
-    assert(reply[1] === CommandNegotiation.SUCCEED);
+    assert(reply[0] === socks5Version);
+    assert(reply[1] === succeed);
 
     // echo
     await socket.write(testBuffer);
@@ -105,12 +112,12 @@ describe("CONNECT", async () => {
 
 describe("UDP ASSOCIATE", async () => {
   let echoSrv: dgram.Socket;
-  let socksSrv: Server;
+  let socksSrv: Agent;
   let socket: TcpSocket;
 
   beforeEach(async () => {
     echoSrv = await startUdpEchoServer(echoServerIP, echoServerPort);
-    socksSrv = await startSocksServer();
+    socksSrv = await startSocksAgent();
     socket = new TcpSocket(
       await createConnection(socksServerPort, socksServerIp)
     );
@@ -125,9 +132,9 @@ describe("UDP ASSOCIATE", async () => {
   it("udp associate", async () => {
     let reply: Buffer;
     // method
-    await socket.write(new Uint8Array([SOCKS5_VERSION, 0x01, 0x00])); // only one method provided
+    await socket.write(new Uint8Array([socks5Version, 0x01, 0x00])); // only one method provided
     reply = await socket.read(2);
-    assert(reply[0] === SOCKS5_VERSION);
+    assert(reply[0] === socks5Version);
     assert(reply[1] === noAuth.method);
 
     // command
@@ -143,14 +150,14 @@ describe("UDP ASSOCIATE", async () => {
 
     const req = new CommandNegotiation.Message(
       UdpAssociate.method,
-      0x01,
-      4,
-      parseIP(udpClientCfg.ip),
+      IPv4,
+      IPv4AddrLen,
+      encodeIP(udpClientCfg.ip),
       udpClientCfg.port
     );
     await socket.write(req.toBuffer());
     const rep = await readMessage(socket);
-    assert(rep.getCmdOrRep() === SUCCEED);
+    assert(rep.getCmdOrRep() === succeed);
 
     // echo
     updSock.send(testString, echoServerPort, echoServerIP);
@@ -159,9 +166,9 @@ describe("UDP ASSOCIATE", async () => {
         assert(msg.toString() === testString);
         resolve();
       });
-      updSock.once("error", (err) => reject(err))
-    })
-    
+      updSock.once("error", (err) => reject(err));
+    });
+
     updSock.close();
   });
 });
