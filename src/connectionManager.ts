@@ -23,7 +23,7 @@ export interface ConnectionManager {
   pipe(ctx: Context, sock1: net.Socket, sock2: Connection): void;
 }
 
-class ConnectionManagement {
+export class ConnectionManagement {
   async createTcpConnection(
     ctx: Context,
     port: number,

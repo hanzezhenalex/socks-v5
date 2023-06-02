@@ -1,8 +1,8 @@
 import { TcpSocket } from "../../net/socket";
-import { Socks5Version } from "../handshake";
 import { SocksError } from "../errors";
 import { AuthManager, UserInfo } from "../../authManager";
 import { Context } from "../../context";
+import { socks5Version } from "../constant";
 
 // +----+------+----------+------+----------+
 // |VER | ULEN |  UNAME   | PLEN |  PASSWD  |
@@ -33,7 +33,7 @@ export var handler = {
     } catch (e) {
       throw new SocksError(
         `Authentication failure, err=${(e as Error).message}`,
-        new Uint8Array([Socks5Version, AuthenticationFail])
+        new Uint8Array([socks5Version, AuthenticationFail])
       );
     }
     // +----+--------+
@@ -41,6 +41,6 @@ export var handler = {
     // +----+--------+
     // | 1  |   1    |
     // +----+--------+
-    await from.write(new Uint8Array([Socks5Version, AuthenticationSuccess]));
+    await from.write(new Uint8Array([socks5Version, AuthenticationSuccess]));
   },
 };

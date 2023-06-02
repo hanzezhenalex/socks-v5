@@ -8,15 +8,12 @@ import { encodeIP } from "../../net/stream";
 import { Context } from "../../context";
 import { getAddrChecker, sendAddressInfo } from "./shared";
 import { Connection } from "../../connectionManager";
-import IPv4 = CommandNegotiation.IPv4;
-import IPv6 = CommandNegotiation.IPv6;
-import IPv4AddrLen = CommandNegotiation.IPv4AddrLen;
-import IPv6AddrLen = CommandNegotiation.IPv6AddrLen;
+import { IPv4, IPv4AddrLen, IPv6, IPv6AddrLen } from "../constant";
 
 export const handler = {
   name: "udp associate",
   method: 0x03,
-  handler: async (
+  handle: async (
     ctx: Context,
     request: CommandNegotiation.Message,
     from: TcpSocket

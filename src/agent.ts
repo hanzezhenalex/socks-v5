@@ -17,19 +17,20 @@ export type AgentMode = "local" | "cluster";
 interface Config {
   localIP: string;
   localPort: number;
-  remoteIP: string;
-  remotePort: number;
+  remoteIP?: string;
+  remotePort?: number;
   commands: string[];
   auths: string[];
   mode: AgentMode;
 }
 
-class Agent {
+export class Agent {
   private readonly cfg: Config;
   private readonly auth: AuthManager;
   private readonly proxy: ConnectionManager;
   private readonly commandHandlers: Map<number, CommandHandler>;
   private readonly authHandlers: Map<number, AuthHandler>;
+  private tcpServer: net.Server | null;
 
   constructor(cfg: Config, auth: AuthManager, proxy: ConnectionManager) {
     this.cfg = cfg;
@@ -37,14 +38,15 @@ class Agent {
     this.authHandlers = new Map<number, AuthHandler>();
     this.auth = auth;
     this.proxy = proxy;
+    this.tcpServer = null;
   }
 
   async start() {
     await this.loadCommandHandlers();
     await this.loadAuthHandlers();
 
-    const tcpServer = await createServer(this.cfg.localIP, this.cfg.localPort);
-    tcpServer.on("connection", this.onConnection.bind(this));
+    this.tcpServer = await createServer(this.cfg.localIP, this.cfg.localPort);
+    this.tcpServer.on("connection", this.onConnection.bind(this));
 
     console.info(`Agent started, cfg=${JSON.stringify(this.cfg)}`);
   }
@@ -123,13 +125,17 @@ class Agent {
   }
 
   private async loadAuthHandlers() {
-    for (const command of this.cfg.auths) {
+    for (const auth of this.cfg.auths) {
       try {
-        const handler = await import(`./protocol/auth/${command}`);
-        this.commandHandlers.set(handler.handler.method, handler.handler);
+        const handler = await import(`./protocol/auth/${auth}`);
+        this.authHandlers.set(handler.handler.method, handler.handler);
       } catch (e) {
-        console.warn(`invalid command: ${command}, skipped`);
+        console.warn(`invalid command: ${auth}, skipped`);
       }
     }
+  }
+
+  close() {
+    this.tcpServer?.close()
   }
 }

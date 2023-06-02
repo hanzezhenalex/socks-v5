@@ -1,5 +1,14 @@
 import { TcpSocket } from "../net/socket";
-import { Socks5Version } from "./handshake";
+import {
+  addrTypeNotAllowed,
+  commandNotSupport,
+  hostUnreachable,
+  IPv4,
+  networkUnreachable,
+  noAcceptableMethods,
+  serverInternalError,
+  socks5Version,
+} from "./constant";
 
 export class SocksError extends Error {
   private readonly msgToSend: Uint8Array;
@@ -15,22 +24,14 @@ export class SocksError extends Error {
   }
 }
 
-export const noAcceptableMethods = 0xff;
-
-export const serverInternalError = 0x01;
-export const networkUnreachable = 0x03;
-export const hostUnreachable = 0x04;
-export const commandNotSupport = 0x07;
-export const addrTypeNotAllowed = 0x08;
-
 function NewCommandError(code: number, msg: string): SocksError {
   return new SocksError(
     msg,
     new Uint8Array([
-      Socks5Version,
-      code,
+      socks5Version, // version
+      code, // rep
       0x00, // rsv
-      0x00, // addr type
+      IPv4, // addr type
       0x00, // dst.host
       0x00,
       0x00,
@@ -43,7 +44,7 @@ function NewCommandError(code: number, msg: string): SocksError {
 
 export const NoAcceptableMethods = new SocksError(
   "NO ACCEPTABLE METHODS",
-  new Uint8Array([Socks5Version, noAcceptableMethods])
+  new Uint8Array([socks5Version, noAcceptableMethods])
 );
 
 export const IncorrectVersion = new SocksError(

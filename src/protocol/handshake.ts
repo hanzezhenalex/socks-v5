@@ -1,9 +1,15 @@
 import { TcpSocket } from "../net/socket";
 import { AddressTypeNotAllowed, IncorrectVersion } from "./errors";
 import { decodeIPv4 } from "../net/stream";
-
-export const Socks5Version = 0x05;
-export const RsvBuffer = 0x00;
+import {
+  DomainName,
+  IPv4,
+  IPv4AddrLen,
+  IPv6,
+  IPv6AddrLen,
+  rsvBuffer,
+  socks5Version,
+} from "./constant";
 
 export namespace MethodNegotiation {
   export class Request {
@@ -29,7 +35,7 @@ export namespace MethodNegotiation {
     // | 1  |    1     | 1 to 255 |
     // +----+----------+----------+
     const version = await socket.read(1);
-    if (version[0] !== Socks5Version) {
+    if (version[0] !== socks5Version) {
       throw IncorrectVersion;
     }
     const n_methods = await socket.read(1);
@@ -46,20 +52,11 @@ export namespace MethodNegotiation {
     // +----+--------+
     // | 1  |   1    |
     // +----+--------+
-    await socket.write(new Uint8Array([Socks5Version, method]));
+    await socket.write(new Uint8Array([socks5Version, method]));
   }
 }
 
 export namespace CommandNegotiation {
-  export const SUCCEED = 0x00;
-
-  export const IPv4 = 0x01;
-  export const DomainName = 0x03;
-  export const IPv6 = 0x04;
-
-  export const IPv4AddrLen = 4;
-  export const IPv6AddrLen = 16;
-
   export class Message {
     private readonly frag: number;
     private readonly cmdOrRep: number;
@@ -74,7 +71,7 @@ export namespace CommandNegotiation {
       addrLength: number,
       dstAddr: Uint8Array,
       dstPort: number | Buffer,
-      frag: number = RsvBuffer
+      frag: number = rsvBuffer
     ) {
       this.cmdOrRep = cmd_or_rep;
       this.addrType = addrType;
@@ -92,7 +89,7 @@ export namespace CommandNegotiation {
 
     needDnsLookUp(): boolean {
       return this.addrType === DomainName;
-    };
+    }
 
     toBuffer = (): Uint8Array => {
       let buffer: Uint8Array;
@@ -130,9 +127,9 @@ export namespace CommandNegotiation {
         default:
           throw AddressTypeNotAllowed;
       }
-      buffer[0] = Socks5Version;
+      buffer[0] = socks5Version;
       buffer[1] = this.cmdOrRep;
-      buffer[2] = RsvBuffer;
+      buffer[2] = rsvBuffer;
       buffer[3] = this.addrType;
       return buffer;
     };
