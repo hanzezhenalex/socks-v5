@@ -13,6 +13,8 @@ import { CommandHandler } from "./protocol/command/shared";
 import { ConnectionManager } from "./connectionManager";
 
 export type AgentMode = "local" | "cluster";
+export const localMode = "local"
+export const clusterMode = "cluster"
 
 interface Config {
   localIP: string;
@@ -30,7 +32,7 @@ export class Agent {
   private readonly proxy: ConnectionManager;
   private readonly commandHandlers: Map<number, CommandHandler>;
   private readonly authHandlers: Map<number, AuthHandler>;
-  private tcpServer: net.Server | null;
+  private tcpServer: net.Server | undefined;
 
   constructor(cfg: Config, auth: AuthManager, proxy: ConnectionManager) {
     this.cfg = cfg;
@@ -38,7 +40,6 @@ export class Agent {
     this.authHandlers = new Map<number, AuthHandler>();
     this.auth = auth;
     this.proxy = proxy;
-    this.tcpServer = null;
   }
 
   async start() {
@@ -136,6 +137,6 @@ export class Agent {
   }
 
   close() {
-    this.tcpServer?.close()
+    this.tcpServer?.close();
   }
 }
