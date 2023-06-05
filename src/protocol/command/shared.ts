@@ -2,10 +2,10 @@ import { Context } from "../../context";
 import { CommandNegotiation } from "../handshake";
 import { TcpSocket } from "../../net/socket";
 import net, { AddressInfo } from "net";
-import { Connection, ConnectionManager } from "../../connectionManager";
 import { encodeIP } from "../../net/stream";
 import { dnsLoopUp } from "../../net/dns";
 import { IPv4, IPv4AddrLen, IPv6, IPv6AddrLen, succeed } from "../constant";
+import { Connection, ConnectionManager } from "../../connectionManager";
 
 export interface CommandHandler {
   name: string;

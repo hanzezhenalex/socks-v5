@@ -22,7 +22,7 @@ async function handle(
 ): Promise<Connection> {
   let to: TcpSocket | undefined;
   try {
-    to = await proxy.createTcpConnection(
+    to = await proxy.dialTCP(
       ctx,
       request.getTargetPort(),
       request.needDnsLookUp()

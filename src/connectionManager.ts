@@ -3,7 +3,7 @@ import dgram, { RemoteInfo } from "dgram";
 import { Context } from "./context";
 import { pipe } from "./net/pipe";
 import { TcpSocket } from "./net/socket";
-import { createConnection } from "./net/stream";
+import { createConnection, createServer } from "./net/stream";
 import udp from "dgram";
 
 type SocketTyp = "udp" | "tcp";
@@ -15,21 +15,18 @@ export interface Connection {
 }
 
 export interface ConnectionManager {
-  createTcpConnection(
-    ctx: Context,
-    port: number,
-    addr: string
-  ): Promise<TcpSocket>;
+  dialTCP(ctx: Context, port: number, addr: string): Promise<TcpSocket>;
   pipe(ctx: Context, sock1: net.Socket, sock2: Connection): void;
+  createServer(host: string, port?: number): Promise<net.Server>;
 }
 
-export class ConnectionManagement {
-  async createTcpConnection(
-    ctx: Context,
-    port: number,
-    addr: string
-  ): Promise<TcpSocket> {
+export class ConnectionManagement implements ConnectionManager {
+  async dialTCP(ctx: Context, port: number, addr: string): Promise<TcpSocket> {
     return new TcpSocket(await createConnection(port, addr));
+  }
+
+  async createServer(host: string, port?: number): Promise<net.Server> {
+    return await createServer(host, port);
   }
 
   pipe(ctx: Context, sock: net.Socket, conn: Connection): void {

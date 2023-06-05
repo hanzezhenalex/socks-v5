@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { Agent, AgentMode, clusterMode, localMode } from "../agent";
 import { AuthManagement } from "../authManager";
 import { ConnectionManagement } from "../connectionManager";
+import { localDatastore } from "../datastore";
 
 export const agentCommand = new Command("agent");
 
@@ -11,7 +12,11 @@ agentCommand
   .option("--agent-ip <value>", "agent ip", "localhost")
   .option("--agent-port <value>", "agent port", "1080")
   .option("--mode <value>", "agent mode", "local")
-  .option("--commands <value...>", "supported commands, connect|bind|udpAssociate", ["connect"])
+  .option(
+    "--commands <value...>",
+    "supported commands, connect|bind|udpAssociate",
+    ["connect"]
+  )
   .option("--auth <value...>", "supported auth methods, noAuth|usrPasswd", [
     "noAuth",
     "usrPasswd",
@@ -39,7 +44,7 @@ agentCommand
         auths: options.auth,
         mode: mode,
       },
-      new AuthManagement(),
+      new AuthManagement(new localDatastore()),
       new ConnectionManagement()
     );
     await agent.start();

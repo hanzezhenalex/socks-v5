@@ -1,3 +1,9 @@
+export interface UserInfo {
+  password: string;
+  username: string;
+}
+
 export interface Context {
-    serverAddr: string
+  serverAddr: string;
+  user: string | undefined;
 }
