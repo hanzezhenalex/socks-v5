@@ -106,7 +106,7 @@ export class Worker {
   private async loadCommandHandlers(commands: string[]) {
     for (const command of commands) {
       try {
-        const handler = await import(`./protocol/command/${command}`);
+        const handler = await import(`./command/${command}`);
         this.commandHandlers.set(handler.handler.method, handler.handler);
       } catch (e) {
         console.warn(`invalid authentication method: ${command}, skipped`);
@@ -117,7 +117,7 @@ export class Worker {
   private async loadAuthHandlers(auths: string[]) {
     for (const auth of auths) {
       try {
-        const handler = await import(`./protocol/auth/${auth}`);
+        const handler = await import(`./auth/${auth}`);
         this.authHandlers.set(handler.handler.method, handler.handler);
       } catch (e) {
         console.warn(`invalid command: ${auth}, skipped`);
