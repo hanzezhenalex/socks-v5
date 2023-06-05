@@ -18,6 +18,7 @@ import {
   socks5Version,
   succeed,
 } from "../protocol/constant";
+import { localDatastore } from "../datastore";
 
 const socksServerIp = "127.0.0.1";
 const socksServerPort = 9090;
@@ -58,7 +59,11 @@ async function startSocksAgent(): Promise<Agent> {
     auths: ["noAuth"],
     mode: "local" as AgentMode,
   };
-  const srv = new Agent(cfg, new AuthManagement(), new ConnectionManagement());
+  const srv = new Agent(
+    cfg,
+    new AuthManagement(new localDatastore()),
+    new ConnectionManagement()
+  );
   await srv.start();
   return srv;
 }
