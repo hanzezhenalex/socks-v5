@@ -3,7 +3,7 @@ const process = require("process");
 
 const child = spawn(
   "node",
-  ["../dist/index.js", "--agent-ip", ":", "--agent-port", "8099"],
+  ["./dist/index.js", "--agent-ip", ":", "--agent-port", "8099"],
   {
     detached: true,
   }
