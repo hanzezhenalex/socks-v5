@@ -1,7 +1,7 @@
 import { TcpSocket } from "../../net/socket";
 import { SocksError } from "../errors";
 import { AuthManager } from "../../authManager";
-import { Context, UserInfo } from "../../context";
+import { Context } from "../../context";
 import { socks5Version } from "../constant";
 
 // +----+------+----------+------+----------+
@@ -9,7 +9,9 @@ import { socks5Version } from "../constant";
 // +----+------+----------+------+----------+
 // | 1  |  1   | 1 to 255 |  1   | 1 to 255 |
 // +----+------+----------+------+----------+
-export async function readReq(from: TcpSocket): Promise<UserInfo> {
+export async function readReq(
+  from: TcpSocket
+): Promise<{ username: string; password: string }> {
   await from.read(1);
   const username = await from.read((await from.read(1))[0]);
   const password = await from.read((await from.read(1))[0]);
@@ -27,9 +29,9 @@ export var handler = {
     from: TcpSocket,
     auth: AuthManager
   ): Promise<void> => {
-    const userInfo = await readReq(from);
+    const { username, password } = await readReq(from);
     try {
-      await auth.verifyUser(ctx, userInfo);
+      await auth.fetchAndStoreToken(ctx, username, password);
     } catch (e) {
       throw new SocksError(
         `Authentication failure, err=${(e as Error).message}`,

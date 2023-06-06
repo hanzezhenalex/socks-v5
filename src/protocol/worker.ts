@@ -77,7 +77,7 @@ export class Worker {
       this.proxy.pipe(ctx, from._sock, to);
     } catch (e) {
       console.error(e);
-      if (e as SocksError) {
+      if (e instanceof SocksError) {
         await (e as SocksError).handle(from);
       }
       from.close();

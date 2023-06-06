@@ -1,4 +1,14 @@
-import { UserInfo } from "./context";
+type Role = "admin" | "user";
+
+export interface UserInfo {
+  username: string;
+  password: string;
+  roles: Role[];
+}
+
+export function isAdminUser(user: UserInfo): boolean {
+  return user.roles.indexOf("admin") !== -1
+}
 
 export interface datastore {
   storeUserInfo(user: UserInfo): void;
