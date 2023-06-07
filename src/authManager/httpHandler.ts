@@ -21,10 +21,6 @@ export interface GetTokenReq {
   password: string;
 }
 
-export interface GetTokenReply {
-  token: string;
-}
-
 export function getTokenHandler(auth: AuthManager) {
   return async (req: Request, res: Response) => {
     const user = req.body as GetTokenReq;
@@ -77,4 +73,3 @@ export function jwtMiddleware(auth: AuthManager) {
     next();
   };
 }
-

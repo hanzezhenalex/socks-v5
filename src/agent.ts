@@ -67,16 +67,16 @@ export class Agent {
 
     app.use(express.json());
     app.use(createContextMiddleware(this.cfg.localIP));
-    
+
     app.post(`${getToken}`, getTokenHandler(this.auth));
 
     const v1 = express.Router().use(jwtMiddleware(this.auth));
     v1.post(`${createNewUser}`, createNewUserHandler(this.auth));
-    
+
     app.use("/v1", v1);
 
-    app.use('*', function(req, res){
-      res.status(404).send('Not Found').end();
+    app.use("*", function (req, res) {
+      res.status(404).send("Not Found").end();
     });
 
     if (this.cfg.tlsCert && this.cfg.tlsKey) {
