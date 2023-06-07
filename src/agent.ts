@@ -3,7 +3,6 @@ import { ConnectionManager } from "./connectionManager";
 import { Worker } from "./protocol/worker";
 import express from "express";
 import * as https from "https";
-import { AddressInfo } from "net";
 import { createContextMiddleware } from "./context";
 import {
   createNewUser,
@@ -13,6 +12,7 @@ import {
   jwtMiddleware,
   setTokenMiddleware,
 } from "./authManager/httpHandler";
+import * as fs from "fs";
 
 export type AgentMode = "local" | "cluster";
 export const localMode = "local";
@@ -21,11 +21,11 @@ export const clusterMode = "cluster";
 interface Config {
   localIP: string;
   localPort: number;
-  localServerPort?: number;
-  tlsKey?: string;
-  tlsCert?: string;
-  remoteIP?: string;
-  remotePort?: number;
+  localServerPort: number;
+  tlsKey: string;
+  tlsCert: string;
+  remoteIP: string;
+  remotePort: number;
   commands: string[];
   auths: string[];
   mode: AgentMode;
@@ -80,7 +80,13 @@ export class Agent {
     v1.post(`${createNewUser}`, createNewUserHandler(this.auth));
     app.use("/v1", v1);
 
-    this.server = https.createServer(app);
+    this.server = https.createServer(
+      {
+        key: fs.readFileSync(this.cfg.tlsKey),
+        cert: fs.readFileSync(this.cfg.tlsCert),
+      },
+      app
+    );
     this.server.listen(this.cfg.localServerPort, this.cfg.localIP, () => {
       console.log(
         `control server is running at ${this.cfg.localIP}:${this.cfg.localServerPort}`
