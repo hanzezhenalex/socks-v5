@@ -1,6 +1,6 @@
 import { TcpSocket } from "../../net/socket";
 import { Context } from "../../context";
-import { AuthManager } from "../../authManager";
+import { AuthManager } from "../../authManager/authManager";
 
 export interface AuthHandler {
   name: string;

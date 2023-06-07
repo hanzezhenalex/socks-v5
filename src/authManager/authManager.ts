@@ -1,5 +1,5 @@
-import { Context } from "./context";
-import { datastore, isAdminUser, UserInfo } from "./datastore";
+import { Context } from "../context";
+import { datastore, isAdminUser, UserInfo } from "../datastore";
 import crypto from "crypto";
 import * as jwt from "jsonwebtoken";
 import { JwtPayload } from "jsonwebtoken";

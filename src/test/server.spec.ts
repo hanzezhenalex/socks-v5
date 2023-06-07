@@ -10,7 +10,7 @@ import * as dgram from "dgram";
 import { createSocket } from "../net/dgram";
 import { handler as UdpAssociate } from "../protocol/command/udpAssociate";
 import readMessage = CommandNegotiation.readMessage;
-import { AuthManagement } from "../authManager";
+import { AuthManagement } from "../authManager/authManager";
 import { ConnectionManagement } from "../connectionManager";
 import {
   IPv4,

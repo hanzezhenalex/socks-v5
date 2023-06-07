@@ -1,6 +1,6 @@
 import { TcpSocket } from "../../net/socket";
 import { SocksError } from "../errors";
-import { AuthManager } from "../../authManager";
+import { AuthManager } from "../../authManager/authManager";
 import { Context } from "../../context";
 import { socks5Version } from "../constant";
 

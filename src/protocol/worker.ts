@@ -1,4 +1,4 @@
-import { AuthManager } from "../authManager";
+import { AuthManager } from "../authManager/authManager";
 import { CommandHandler } from "./command/shared";
 import { AuthHandler } from "./auth/shared";
 import net from "net";

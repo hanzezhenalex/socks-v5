@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { Agent, AgentMode, clusterMode, localMode } from "../agent";
-import { AuthManagement } from "../authManager";
+import { AuthManagement } from "../authManager/authManager";
 import { ConnectionManagement } from "../connectionManager";
 import { localDatastore } from "../datastore";
 
