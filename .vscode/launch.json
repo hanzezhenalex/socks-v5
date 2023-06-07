@@ -7,20 +7,18 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Client",
+            "name": "Launch Agent",
             "skipFiles": [
                 "<node_internals>/**"
             ],
             "program": "${workspaceFolder}/dist/index.js",
             "args": [
-                "client",
-                "--server-ip",
+                "agent",
+                "--agent-ip",
                 "localhost",
-                "--server-port",
+                "--agent-port",
                 "8090",
-                "--client-ip",
-                "localhost",
-                "--client-port",
+                "--agent-server-port",
                 "8091"
             ],
             "preLaunchTask": "compile and copy",

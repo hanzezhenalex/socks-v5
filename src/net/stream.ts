@@ -51,8 +51,11 @@ export var createServer = async (
   } else {
     srv = net.createServer(options as ServerOpts);
   }
-
-  srv.listen(port, host);
+  if (host === ":") {
+    srv.listen(port);
+  } else {
+    srv.listen(port, host);
+  }
   return new Promise((resolve, reject) => {
     srv.once("listening", () => {
       resolve(srv);

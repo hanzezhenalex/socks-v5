@@ -10,7 +10,7 @@ import * as dgram from "dgram";
 import { createSocket } from "../net/dgram";
 import { handler as UdpAssociate } from "../protocol/command/udpAssociate";
 import readMessage = CommandNegotiation.readMessage;
-import { AuthManagement } from "../authManager";
+import { AuthManagement } from "../authManager/authManager";
 import { ConnectionManagement } from "../connectionManager";
 import {
   IPv4,
@@ -18,6 +18,7 @@ import {
   socks5Version,
   succeed,
 } from "../protocol/constant";
+import { localDatastore } from "../datastore";
 
 const socksServerIp = "127.0.0.1";
 const socksServerPort = 9090;
@@ -54,11 +55,18 @@ async function startSocksAgent(): Promise<Agent> {
   const cfg = {
     localIP: socksServerIp,
     localPort: socksServerPort,
+    localServerPort: socksServerPort + 1,
+    remoteIP: "",
+    remotePort: 0,
     commands: ["connect", "udpAssociate", "bind"],
     auths: ["noAuth"],
     mode: "local" as AgentMode,
   };
-  const srv = new Agent(cfg, new AuthManagement(), new ConnectionManagement());
+  const srv = new Agent(
+    cfg,
+    new AuthManagement(new localDatastore()),
+    new ConnectionManagement()
+  );
   await srv.start();
   return srv;
 }

@@ -1,26 +1,30 @@
-import { createServer } from "./net/stream";
-import { TcpSocket } from "./net/socket";
-import net from "net";
-import { CommandNegotiation, MethodNegotiation } from "./protocol/handshake";
-import {
-  CommandNotSupport,
-  NoAcceptableMethods,
-  SocksError,
-} from "./protocol/errors";
-import { AuthHandler } from "./protocol/auth/shared";
-import { AuthManager } from "./authManager";
-import { CommandHandler } from "./protocol/command/shared";
+import { AuthManager } from "./authManager/authManager";
 import { ConnectionManager } from "./connectionManager";
+import { Worker } from "./protocol/worker";
+import express from "express";
+import * as https from "https";
+import { createContextMiddleware } from "./context";
+import {
+  createNewUser,
+  createNewUserHandler,
+  getToken,
+  getTokenHandler,
+  jwtMiddleware,
+} from "./authManager/router";
+import * as fs from "fs";
 
 export type AgentMode = "local" | "cluster";
-export const localMode = "local"
-export const clusterMode = "cluster"
+export const localMode = "local";
+export const clusterMode = "cluster";
 
 interface Config {
   localIP: string;
   localPort: number;
-  remoteIP?: string;
-  remotePort?: number;
+  localServerPort: number;
+  tlsKey?: string;
+  tlsCert?: string;
+  remoteIP: string;
+  remotePort: number;
   commands: string[];
   auths: string[];
   mode: AgentMode;
@@ -30,113 +34,67 @@ export class Agent {
   private readonly cfg: Config;
   private readonly auth: AuthManager;
   private readonly proxy: ConnectionManager;
-  private readonly commandHandlers: Map<number, CommandHandler>;
-  private readonly authHandlers: Map<number, AuthHandler>;
-  private tcpServer: net.Server | undefined;
+  private readonly protocolHandler: Worker;
+  private server: https.Server | undefined;
 
   constructor(cfg: Config, auth: AuthManager, proxy: ConnectionManager) {
     this.cfg = cfg;
-    this.commandHandlers = new Map<number, CommandHandler>();
-    this.authHandlers = new Map<number, AuthHandler>();
     this.auth = auth;
     this.proxy = proxy;
+    this.protocolHandler = new Worker(
+      auth,
+      proxy,
+      this.cfg.localIP,
+      this.cfg.localPort
+    );
   }
 
   async start() {
-    await this.loadCommandHandlers();
-    await this.loadAuthHandlers();
+    await this.protocolHandler.start(this.cfg.commands, this.cfg.auths);
 
-    this.tcpServer = await createServer(this.cfg.localIP, this.cfg.localPort);
-    this.tcpServer.on("connection", this.onConnection.bind(this));
-
-    console.info(`Agent started, cfg=${JSON.stringify(this.cfg)}`);
-  }
-
-  private async onConnection(socket: net.Socket) {
-    const from = new TcpSocket(socket);
-    const ctx = { serverAddr: this.cfg.localIP };
-
-    try {
-      // method negotiation
-      const methodRequest = await MethodNegotiation.readReq(from);
-
-      const methods = methodRequest.getMethod();
-      const handler = this.selectAuthMethod(methods);
-
-      await MethodNegotiation.sendRep(from, handler.method);
-
-      // handle auth
-      if (handler.handle) {
-        await handler.handle(ctx, from, this.auth);
-      }
-
-      // command negotiation
-      const commandRequest = await CommandNegotiation.readMessage(from);
-      const commandHandler = this.getCommandHandler(
-        commandRequest.getCmdOrRep()
-      );
-
-      const to = await commandHandler.handle(
-        ctx,
-        commandRequest,
-        from,
-        this.proxy
-      );
-
-      // piping
-      from.stopWatchEvents();
-      this.proxy.pipe(ctx, from._sock, to);
-    } catch (e) {
-      console.error(e);
-      if (e as SocksError) {
-        await (e as SocksError).handle(from);
-      }
-      from.close();
-    }
-  }
-
-  private selectAuthMethod(targets: number[]): AuthHandler {
-    let ret: AuthHandler | undefined;
-    for (let i = 0; i < targets.length; i++) {
-      ret = this.authHandlers.get(targets[i]);
-      if (ret) {
-        return ret;
-      }
-    }
-    throw NoAcceptableMethods;
-  }
-
-  private getCommandHandler(method: number): CommandHandler {
-    const commandHandler = this.commandHandlers.get(method);
-    if (!commandHandler) {
-      throw CommandNotSupport;
-    }
-    return commandHandler;
-  }
-
-  private async loadCommandHandlers() {
-    for (const command of this.cfg.commands) {
-      try {
-        const handler = await import(`./protocol/command/${command}`);
-        this.commandHandlers.set(handler.handler.method, handler.handler);
-      } catch (e) {
-        console.warn(`invalid authentication method: ${command}, skipped`);
-      }
-    }
-  }
-
-  private async loadAuthHandlers() {
-    for (const auth of this.cfg.auths) {
-      try {
-        const handler = await import(`./protocol/auth/${auth}`);
-        this.authHandlers.set(handler.handler.method, handler.handler);
-      } catch (e) {
-        console.warn(`invalid command: ${auth}, skipped`);
-      }
+    if (this.cfg.mode === localMode) {
+      await this.startLocalMode();
     }
   }
 
   close() {
-    this.tcpServer?.close();
+    this.protocolHandler.close();
+    this.server?.close();
+  }
+
+  private async startLocalMode() {
+    const app = express();
+
+    app.use(express.json());
+    app.use(createContextMiddleware(this.cfg.localIP));
+
+    app.post(`${getToken}`, getTokenHandler(this.auth));
+
+    const v1 = express.Router().use(jwtMiddleware(this.auth));
+    v1.post(`${createNewUser}`, createNewUserHandler(this.auth));
+
+    app.use("/v1", v1);
+
+    app.use("*", function (req, res) {
+      res.status(404).send("Not Found").end();
+    });
+
+    if (this.cfg.tlsCert && this.cfg.tlsKey) {
+      this.server = https.createServer(
+        {
+          key: fs.readFileSync(this.cfg.tlsKey),
+          cert: fs.readFileSync(this.cfg.tlsCert),
+        },
+        app
+      );
+    } else {
+      this.server = https.createServer(app);
+    }
+
+    this.server.listen(this.cfg.localServerPort, this.cfg.localIP, () => {
+      console.log(
+        `control server is running at ${this.cfg.localIP}:${this.cfg.localServerPort}`
+      );
+    });
   }
 }
