@@ -10,7 +10,8 @@ import {
   createNewUserHandler,
   getToken,
   getTokenHandler,
-  jwtMiddleware, setTokenMiddleware,
+  jwtMiddleware,
+  setTokenMiddleware,
 } from "./authManager/httpHandler";
 
 export type AgentMode = "local" | "cluster";
@@ -20,6 +21,9 @@ export const clusterMode = "cluster";
 interface Config {
   localIP: string;
   localPort: number;
+  localServerPort?: number;
+  tlsKey?: string;
+  tlsCert?: string;
   remoteIP?: string;
   remotePort?: number;
   commands: string[];
@@ -52,8 +56,6 @@ export class Agent {
     if (this.cfg.mode === localMode) {
       await this.startLocalMode();
     }
-
-    console.info(`Agent started, cfg=${JSON.stringify(this.cfg)}`);
   }
 
   close() {
@@ -65,7 +67,7 @@ export class Agent {
     const app = express();
 
     app.use(express.json());
-    app.use(setTokenMiddleware())
+    app.use(setTokenMiddleware());
     app.post(`/v1${getToken}`, getTokenHandler(this.auth));
 
     const root = express.Router();
@@ -79,11 +81,9 @@ export class Agent {
     app.use("/v1", v1);
 
     this.server = https.createServer(app);
-    this.server.listen(() => {
+    this.server.listen(this.cfg.localServerPort, this.cfg.localIP, () => {
       console.log(
-        `server is running at  ${(
-          this.server?.address() as AddressInfo
-        ).toString()}`
+        `control server is running at ${this.cfg.localIP}:${this.cfg.localServerPort}`
       );
     });
   }
