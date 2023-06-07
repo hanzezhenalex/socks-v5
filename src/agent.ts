@@ -22,8 +22,8 @@ interface Config {
   localIP: string;
   localPort: number;
   localServerPort: number;
-  tlsKey: string;
-  tlsCert: string;
+  tlsKey?: string;
+  tlsCert?: string;
   remoteIP: string;
   remotePort: number;
   commands: string[];
@@ -80,13 +80,18 @@ export class Agent {
     v1.post(`${createNewUser}`, createNewUserHandler(this.auth));
     app.use("/v1", v1);
 
-    this.server = https.createServer(
-      {
-        key: fs.readFileSync(this.cfg.tlsKey),
-        cert: fs.readFileSync(this.cfg.tlsCert),
-      },
-      app
-    );
+    if (this.cfg.tlsCert && this.cfg.tlsKey) {
+      this.server = https.createServer(
+        {
+          key: fs.readFileSync(this.cfg.tlsKey),
+          cert: fs.readFileSync(this.cfg.tlsCert),
+        },
+        app
+      );
+    } else {
+      this.server = https.createServer(app);
+    }
+
     this.server.listen(this.cfg.localServerPort, this.cfg.localIP, () => {
       console.log(
         `control server is running at ${this.cfg.localIP}:${this.cfg.localServerPort}`

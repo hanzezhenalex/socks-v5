@@ -55,6 +55,9 @@ async function startSocksAgent(): Promise<Agent> {
   const cfg = {
     localIP: socksServerIp,
     localPort: socksServerPort,
+    localServerPort: socksServerPort+1,
+    remoteIP: "",
+    remotePort: 0,
     commands: ["connect", "udpAssociate", "bind"],
     auths: ["noAuth"],
     mode: "local" as AgentMode,
