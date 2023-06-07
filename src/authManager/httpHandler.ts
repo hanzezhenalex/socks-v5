@@ -13,8 +13,8 @@ declare global {
   }
 }
 
-export const getToken = "auth/getToken";
-export const createNewUser = "auth/createNewUser";
+export const getToken = "/auth/getToken";
+export const createNewUser = "/auth/createNewUser";
 
 export interface GetTokenReq {
   username: string;
@@ -38,8 +38,9 @@ export function getTokenHandler(auth: AuthManager) {
       return;
     }
     const token = await auth.fetchToken(user.username, user.password);
-    res.json({ token: token } as GetTokenReply);
+    res.setHeader("Authorization", `Bearer ${token}`);
     res.status(200);
+    res.json({ token: token });
   };
 }
 
@@ -72,15 +73,8 @@ export function jwtMiddleware(auth: AuthManager) {
       return res.status(401).end();
     }
     auth.decodeToken(context, token[1]);
+    res.setHeader("Authorization", `Bearer ${req.context.token}`);
     next();
   };
 }
 
-export function setTokenMiddleware() {
-  return async (req: Request, res: Response, next: Function) => {
-    next();
-    if (req.context.token) {
-      res.setHeader("Authorization", `Bearer ${req.context.token}`);
-    }
-  };
-}

@@ -10,7 +10,6 @@ import {
   getToken,
   getTokenHandler,
   jwtMiddleware,
-  setTokenMiddleware,
 } from "./authManager/httpHandler";
 import * as fs from "fs";
 
@@ -67,18 +66,18 @@ export class Agent {
     const app = express();
 
     app.use(express.json());
-    app.use(setTokenMiddleware());
-    app.post(`/v1${getToken}`, getTokenHandler(this.auth));
+    app.use(createContextMiddleware(this.cfg.localIP));
+    
+    app.post(`${getToken}`, getTokenHandler(this.auth));
 
-    const root = express.Router();
-    root.use(createContextMiddleware(this.cfg.localIP));
-    root.use(jwtMiddleware(this.auth));
-
-    app.use("/", root);
-
-    const v1 = express.Router();
+    const v1 = express.Router().use(jwtMiddleware(this.auth));
     v1.post(`${createNewUser}`, createNewUserHandler(this.auth));
+    
     app.use("/v1", v1);
+
+    app.use('*', function(req, res){
+      res.status(404).send('Not Found').end();
+    });
 
     if (this.cfg.tlsCert && this.cfg.tlsKey) {
       this.server = https.createServer(
