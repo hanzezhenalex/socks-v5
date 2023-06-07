@@ -10,7 +10,7 @@ import {
   getToken,
   getTokenHandler,
   jwtMiddleware,
-} from "./authManager/httpHandler";
+} from "./authManager/router";
 import * as fs from "fs";
 
 export type AgentMode = "local" | "cluster";

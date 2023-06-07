@@ -7,7 +7,7 @@ export interface UserInfo {
 }
 
 export function isAdminUser(user: UserInfo): boolean {
-  return user.roles.indexOf("admin") !== -1
+  return user.roles.indexOf("admin") !== -1;
 }
 
 export interface datastore {

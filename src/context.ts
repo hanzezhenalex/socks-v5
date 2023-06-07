@@ -12,13 +12,10 @@ export function createContextMiddleware(serverAddr: string) {
     res: express.Response,
     next: Function
   ) {
-    if (req.url === "") {
-    } else {
-      req.context = {
-        serverAddr: serverAddr,
-        user: undefined,
-      };
-    }
+    req.context = {
+      serverAddr: serverAddr,
+      user: undefined,
+    };
     next();
   };
 }

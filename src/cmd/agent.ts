@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { Agent, AgentMode, clusterMode, localMode } from "../agent";
-import { AuthManagement } from "../authManager/authManager";
-import { ConnectionManagement } from "../connectionManager";
+import { AuthManagement, AuthManager } from "../authManager/authManager";
+import { ConnectionManagement, ConnectionManager } from "../connectionManager";
 import { localDatastore } from "../datastore";
 
 export const agentCommand = new Command("agent");
@@ -11,10 +11,18 @@ agentCommand
   .option("--remote-port <value>", "socks5 server port", "1080")
   .option("--agent-ip <value>", "agent ip", "localhost")
   .option("--agent-port <value>", "agent port", "1080")
-  .option("--agent-server-port <value>", "agent port", "1081")
+  .option("--agent-server-port <value>", "agent control server port", "1081")
   .option("--mode <value>", "agent mode", "local")
-  .option("--tls-key <value>", "agent mode", "./cert/key.pem")
-  .option("--tls-cert <value>", "agent mode", "./cert/cert.pem")
+  .option(
+    "--tls-key <value>",
+    "private key for agent control server",
+    "./cert/key.pem"
+  )
+  .option(
+    "--tls-cert <value>",
+    "cert for agent control server",
+    "./cert/cert.pem"
+  )
   .option(
     "--commands <value...>",
     "supported commands, connect|bind|udpAssociate",
@@ -26,9 +34,13 @@ agentCommand
   ])
   .action(async (options, command) => {
     let mode: AgentMode;
+    let auth: AuthManager;
+    let cm: ConnectionManager;
     switch (options.mode) {
       case localMode:
         mode = localMode;
+        auth = new AuthManagement(new localDatastore());
+        cm = new ConnectionManagement();
         break;
       case clusterMode:
         mode = clusterMode;
@@ -50,8 +62,8 @@ agentCommand
         tlsKey: options.tlsKey,
         tlsCert: options.tlsCert,
       },
-      new AuthManagement(new localDatastore()),
-      new ConnectionManagement()
+      auth,
+      cm
     );
     await agent.start();
   });

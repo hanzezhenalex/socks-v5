@@ -1,17 +1,6 @@
 import { AuthManager } from "./authManager";
 import { Request, Response } from "express";
 import { UserInfo } from "../datastore";
-import { Context } from "../context";
-
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace Express {
-    interface Request {
-      logger: unknown;
-      context: Context;
-    }
-  }
-}
 
 export const getToken = "/auth/getToken";
 export const createNewUser = "/auth/createNewUser";
